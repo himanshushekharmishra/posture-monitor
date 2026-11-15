@@ -110,8 +110,44 @@ flowchart LR
 The browser does the expensive part (pose estimation) and sends only landmarks, so
 video never leaves the page and the server stays tiny: it doesn't import OpenCV or
 MediaPipe. The server runs exactly the same `src/engine` code as the desktop app,
-so a score means the same thing in both, and they share `baseline.json` and
-`posture.db`.
+so a score means the same thing in both. Web data is per account: calibrations are
+in the `user_baselines` table and sessions carry a `user_id`; desktop sessions have
+none and the desktop app keeps `baseline.json`.
+
+### Accounts (`backend/auth/`)
+
+```mermaid
+flowchart LR
+    page["login.html"] -->|"username + password"| login["/api/auth/login"]
+    page -->|"Google / GitHub"| oauth["/auth/{provider}/start<br/>state + PKCE"]
+    oauth --> provider["Provider sign-in"] --> cb["/auth/{provider}/callback"]
+    page -->|"phone"| otp["/api/auth/phone/send + verify"]
+    cb --> resolve{"identity linked?"}
+    otp --> resolve
+    resolve -->|"yes"| session["session cookie"]
+    resolve -->|"no"| pending["pending identity<br/>choose username + password"] --> signup["/api/auth/signup"]
+    page -->|"guest"| signup
+    signup --> session
+    login --> session
+```
+
+Every account has a username and password. A verified identity (Google, GitHub or a
+phone code) is required to sign up, except for guests, who get a trial and can
+connect one later. Pages, `/api/stats`, `/api/baseline` and `/ws` need an active
+account (logged in, and not a guest whose trial ended).
+
+| File | Role |
+|---|---|
+| `passwords.py` | scrypt hashing, username and password rules |
+| `store.py` | users, identities, login sessions, pending sign-ups, phone codes, per-account calibration (SQLite, tokens stored hashed) |
+| `ratelimit.py` | per-IP / per-number sliding-window limits |
+| `sms.py` | phone normalising; console (local testing) or Twilio sender |
+| `oauth.py` | Google and GitHub authorization-code flow with state and PKCE |
+| `routes.py` | the HTTP endpoints; `Auth.active_user()` for the rest of the app |
+
+`app.py` adds a guard on every request: allowed Host only, cross-site or non-JSON
+writes refused, login required for the app page, and security headers (CSP without
+inline scripts, no framing, nosniff).
 
 | File | Role |
 |---|---|
@@ -123,6 +159,8 @@ so a score means the same thing in both, and they share `baseline.json` and
 | `frontend/js/connection.js` | WebSocket client with reconnect and backoff |
 | `frontend/js/main.js` | camera, frame loop, calibration, alerts, labelling |
 | `frontend/js/view.js`, `skeleton.js` | everything that draws or writes to the page |
+| `frontend/login.html`, `auth.css`, `js/login.js` | log in, sign up, phone codes, finishing a verified sign-up, trial ended |
+| `frontend/js/api.js` | JSON helper for `/api/*` that surfaces the server's error message |
 
 The frame loop is paced by a timer inside a Web Worker, because browsers throttle
 ordinary timers in background tabs (Chrome down to once a minute), which would

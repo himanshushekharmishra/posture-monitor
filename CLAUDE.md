@@ -25,9 +25,14 @@ Side inputs: calibration baseline (data/output/baseline.json), tray icon (pystra
 - scripts/        PowerShell setup/run, benchmark.py, make_examples.py
 - docs/           architecture.md, usage.md, progress.md (status log), benchmarks.md (generated)
 - backend/        FastAPI web server: protocol.py (WS messages), session.py (pure,
-                  reuses src/engine), app.py (routes + I/O). No OpenCV/MediaPipe.
+                  reuses src/engine), app.py (routes, request guard + I/O),
+                  security.py. No OpenCV/MediaPipe.
+- backend/auth/   accounts: passwords (scrypt), store (SQLite), ratelimit, sms,
+                  oauth (Google/GitHub, state+PKCE), routes. Every account has a
+                  username + password; secrets only in .env, never settings.json
 - frontend/       plain HTML/CSS/JS, no build step; MediaPipe runs in the browser
-                  and only landmarks are sent to the backend
+                  and only landmarks are sent to the backend. login.html = auth,
+                  index.html = app (needs login). No inline scripts (CSP).
 - tests/          pytest
 
 ## Commands

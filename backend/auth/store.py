@@ -8,6 +8,7 @@ hash could be brute-forced.
 from __future__ import annotations
 
 import hashlib
+import math
 import hmac
 import secrets
 import sqlite3
@@ -103,9 +104,11 @@ class User:
         return self.is_guest and self.trial_expires_at is not None and now >= self.trial_expires_at
 
     def trial_days_left(self, now: datetime) -> int | None:
+        """Whole days left, rounded up: a new 14-day trial shows 14, the last hours show 1."""
         if not self.is_guest or self.trial_expires_at is None:
             return None
-        return max(0, (self.trial_expires_at - now).days)
+        seconds = (self.trial_expires_at - now).total_seconds()
+        return max(0, math.ceil(seconds / 86400))
 
 
 @dataclass(frozen=True)

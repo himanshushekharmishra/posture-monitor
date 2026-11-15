@@ -40,7 +40,12 @@ export class PostureSocket {
         console.error("Bad message from server", err);
       }
     });
-    ws.addEventListener("close", () => {
+    ws.addEventListener("close", (e) => {
+      if (e.code === 4401) {
+        // Logged out, session expired or trial over: reconnecting won't help.
+        this.onStatus("unauthorized");
+        return;
+      }
       this.onStatus("offline");
       setTimeout(() => this.connect(), this.backoff);
       this.backoff = Math.min(this.backoff * 2, MAX_BACKOFF_MS);

@@ -9,10 +9,13 @@ uploaded; only posture numbers and events are kept, on your machine.
 ```powershell
 python -m backend        # then open http://127.0.0.1:8000
 ```
-The browser runs the pose model itself and sends only 33 body points per frame to
-the local server (`backend/`), which scores your posture with the same engine as
-the desktop app. The page (`frontend/`) shows your state, a score meter, alerts and
-today's numbers. Calibrate, alerts and labelling all work from the page.
+Sign up with Google, GitHub or a phone code (or as a 14-day guest), log in with
+your username and password, then start the camera. The browser runs the pose model
+itself and sends only 33 body points per frame to the server (`backend/`), which
+scores your posture with the same engine as the desktop app. The page (`frontend/`)
+shows your state, a score meter, alerts and today's numbers. Each account has its
+own calibration and history. Google, GitHub and SMS need keys in `.env`; see
+[docs/usage.md](docs/usage.md#setting-up-google-github-and-sms).
 
 ## Quick start (Windows)
 ```powershell

@@ -1,5 +1,6 @@
 // Wires camera -> pose model -> server -> page together.
 //   camera frames stay here; only landmarks ([x, y, visibility] x 33) are sent.
+import { api } from "./api.js";
 import { PostureSocket } from "./connection.js";
 import { createPoseDetector } from "./pose.js";
 import { clearSkeleton, drawSkeleton } from "./skeleton.js";
@@ -115,6 +116,11 @@ function notify(alert) {
 }
 
 const socket = new PostureSocket(onMessage, (status) => {
+  if (status === "unauthorized") {
+    stopCamera();
+    location.replace("/login.html"); // the page sends expired trials on to #trial-ended
+    return;
+  }
   view.setLinkStatus(status);
   if (status === "online") refreshStats();
   refreshButtons();
@@ -200,8 +206,41 @@ document.getElementById("missed-btn").addEventListener("click", () => {
   socket.send({ type: "label", kind: "missed" });
 });
 
+// ---------- account ----------
+async function loadAccount() {
+  let me;
+  try {
+    me = await api("/api/auth/me");
+  } catch (err) {
+    if (err.status === 401) location.replace("/login.html");
+    return false;
+  }
+  if (me.trial_expired) {
+    location.replace("/login.html#trial-ended");
+    return false;
+  }
+  document.getElementById("account-name").textContent = me.display_name || me.username;
+  const banner = document.getElementById("trial-banner");
+  if (me.is_guest) {
+    const days = me.trial_days_left;
+    banner.textContent = `Guest trial: ${days} day${days === 1 ? "" : "s"} left.`;
+    banner.hidden = false;
+  }
+  return true;
+}
+
+document.getElementById("logout-btn").addEventListener("click", async () => {
+  stopCamera();
+  try {
+    await api("/api/auth/logout", {});
+  } finally {
+    location.replace("/login.html");
+  }
+});
+
 // ---------- start up ----------
 async function init() {
+  if (!(await loadAccount())) return;
   if ("Notification" in window) view.setNotifyButton(Notification.permission);
   else view.setNotifyButton("unsupported");
   try {

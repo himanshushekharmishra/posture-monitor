@@ -409,3 +409,14 @@ def test_flow_store_expires():
     state, _ = flows.start("google", "login", None)
     t["now"] = 601
     assert flows.take(state) is None
+
+
+def test_trial_days_left_rounds_up(store):
+    s, now = store
+    u = s.create_user("t1x", hash_password(GOOD_PW), guest_trial_days=14)
+    now.t += timedelta(seconds=5)  # a moment after signing up
+    assert s.get_user(u.id).trial_days_left(now()) == 14
+    now.t += timedelta(days=13, hours=23)
+    assert s.get_user(u.id).trial_days_left(now()) == 1
+    now.t += timedelta(hours=2)
+    assert s.get_user(u.id).trial_days_left(now()) == 0

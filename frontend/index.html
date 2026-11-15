@@ -13,8 +13,13 @@
 <body>
   <header class="topbar">
     <h1 class="brand">Posture Monitor</h1>
-    <p class="link-status" id="link-status" data-state="connecting">Connecting to the server</p>
+    <div class="topbar-right">
+      <p class="link-status" id="link-status" data-state="connecting">Connecting to the server</p>
+      <p class="account"><span id="account-name"></span>
+        <button type="button" class="quiet" id="logout-btn">Log out</button></p>
+    </div>
   </header>
+  <p class="trial-banner" id="trial-banner" hidden></p>
 
   <main class="layout">
     <section class="camera" aria-label="Camera">

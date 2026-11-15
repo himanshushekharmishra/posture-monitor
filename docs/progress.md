@@ -10,9 +10,9 @@ Last updated: 2026-11-15, on `main`, after the code review fixes.
 | Area | State |
 |---|---|
 | Desktop app (5 build phases) | done |
-| Web app (`backend/` + `frontend/`) | done; live webcam in the page not yet tried by a person |
+| Web app (`backend/` + `frontend/`) | done, with accounts; live webcam in the page not yet tried by a person |
 | Code review | done: 16 problems found and fixed (table below) |
-| Tests | 111 passing (`pytest -q`) |
+| Tests | 112 passing (`pytest -q`) |
 | Benchmarks | measured, but only with nobody in frame |
 | Alert precision | not measured yet (needs a 30-minute labelled session) |
 
@@ -83,9 +83,9 @@ previous sessions, a slouch meter and settings.
 
 | Step | State | Commit |
 |---|---|---|
-| Backend: accounts, sessions, phone codes, Google/GitHub OAuth, per-account data | done | this commit |
-| Login and sign-up page | next | |
-| Dashboard (profile, previous sessions, slouch meter, settings) | later | |
+| Backend: accounts, sessions, phone codes, Google/GitHub OAuth, per-account data | done | `5648b07` |
+| Login and sign-up page; app page shows the account, log out, guest trial days | done | this commit |
+| Dashboard (profile, previous sessions, slouch meter, settings) | next | |
 
 Security built in: scrypt password hashes; session cookies that are HttpOnly,
 SameSite=Lax and Secure on https, stored only as hashes; lockout after 8 wrong
@@ -93,6 +93,13 @@ passwords and per-network rate limits; single-use 6-digit phone codes that expir
 in 5 minutes, stored as HMACs, with limited guesses; OAuth with `state`, PKCE and
 a browser-bound cookie; cross-site and non-JSON writes refused; strict security
 headers (CSP, no framing); the same error for unknown users and wrong passwords.
+
+Checked in a browser: guest sign-up (a mismatched password was caught first), phone
+sign-up with a console code then choosing a username and password, log out, a wrong
+password ("Wrong username or password."), log in, the app page showing the account
+and connecting, the pose model loading under the new security headers, and the
+login page at phone width with an error message. Fixed on the way: a new 14-day
+trial showed "13 days left" (rounding), and provider buttons lacked accessible names.
 
 Needs you: Google and GitHub sign-in work once you register the app and put the
 IDs in `.env` (steps in `config/env.example`); real SMS needs a Twilio account.

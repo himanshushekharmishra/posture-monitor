@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Log in · Posture Monitor</title>
+  <meta name="description" content="Log in or create an account for Posture Monitor.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="auth.css">
+</head>
+<body class="auth-page">
+  <main class="auth">
+    <section class="auth-intro" aria-label="About">
+      <h1 class="brand">Posture Monitor</h1>
+      <p class="auth-pitch">Sit better without thinking about it. Your camera watches your
+        posture and nudges you when you've been slouching for a while.</p>
+      <p class="auth-privacy">Video never leaves your browser. Only 33 body points per frame
+        reach the server, and your history is visible only to you.</p>
+    </section>
+
+    <section class="auth-card" aria-label="Account">
+      <div class="auth-switch" role="tablist" aria-label="Log in or sign up">
+        <button type="button" role="tab" id="tab-login" aria-controls="view-login"
+                aria-selected="true">Log in</button>
+        <button type="button" role="tab" id="tab-signup" aria-controls="view-signup"
+                aria-selected="false">Sign up</button>
+      </div>
+
+      <p class="auth-message" id="message" role="alert" hidden></p>
+
+      <!-- Log in -->
+      <div class="auth-view" id="view-login" role="tabpanel" aria-labelledby="tab-login">
+        <form id="login-form" novalidate>
+          <label for="login-username">Username</label>
+          <input id="login-username" name="username" autocomplete="username" required
+                 autocapitalize="none" spellcheck="false" maxlength="32">
+          <label for="login-password">Password</label>
+          <div class="password-field">
+            <input id="login-password" name="password" type="password" required
+                   autocomplete="current-password" maxlength="128">
+            <button type="button" class="show-password" aria-label="Show password">Show</button>
+          </div>
+          <button type="submit" class="primary wide">Log in</button>
+        </form>
+        <p class="divider"><span>or continue with</span></p>
+        <div class="providers" data-intent="login"></div>
+      </div>
+
+      <!-- Sign up -->
+      <div class="auth-view" id="view-signup" role="tabpanel" aria-labelledby="tab-signup" hidden>
+        <p class="step-title">Verify it's you</p>
+        <p class="step-note">Then choose a username and password for your account.</p>
+        <div class="providers" data-intent="login"></div>
+        <p class="divider"><span>or</span></p>
+        <p class="step-title">Try it as a guest</p>
+        <p class="step-note" id="guest-note">Free trial with just a username and password.
+          Connect Google, GitHub or a phone later to keep your account.</p>
+        <form id="guest-form" novalidate>
+          <label for="guest-username">Username</label>
+          <input id="guest-username" name="username" autocomplete="username" required
+                 autocapitalize="none" spellcheck="false" maxlength="32">
+          <label for="guest-password">Password</label>
+          <div class="password-field">
+            <input id="guest-password" name="password" type="password" required
+                   autocomplete="new-password" minlength="10" maxlength="128"
+                   aria-describedby="guest-password-rule">
+            <button type="button" class="show-password" aria-label="Show password">Show</button>
+          </div>
+          <p class="field-rule" id="guest-password-rule">At least 10 characters. A few unrelated
+            words work well.</p>
+          <label for="guest-confirm">Confirm password</label>
+          <input id="guest-confirm" name="confirm" type="password" required
+                 autocomplete="new-password" maxlength="128">
+          <button type="submit" class="wide">Start guest trial</button>
+        </form>
+      </div>
+
+      <!-- Phone code (used by log in, sign up and connecting a phone) -->
+      <div class="auth-view" id="view-phone" hidden>
+        <p class="step-title">Continue with your phone</p>
+        <form id="phone-form" novalidate>
+          <label for="phone">Phone number with country code</label>
+          <input id="phone" name="phone" type="tel" autocomplete="tel" required
+                 placeholder="+91 98765 43210" maxlength="24">
+          <button type="submit" class="primary wide" id="send-code">Send code</button>
+        </form>
+        <form id="code-form" novalidate hidden>
+          <label for="code">6-digit code sent to <span id="sent-to"></span></label>
+          <input id="code" name="code" inputmode="numeric" autocomplete="one-time-code"
+                 pattern="[0-9]{6}" maxlength="6" required>
+          <p class="field-rule" id="dev-sms" hidden>SMS isn't set up on this server, so the code
+            is shown in the server's console window.</p>
+          <button type="submit" class="primary wide">Verify</button>
+          <button type="button" class="quiet" id="resend">Send a new code</button>
+        </form>
+        <button type="button" class="quiet back" data-back>Back</button>
+      </div>
+
+      <!-- Finish sign-up after Google / GitHub / phone -->
+      <div class="auth-view" id="view-complete" hidden>
+        <p class="step-title">Choose your username and password</p>
+        <p class="step-note" id="verified-as"></p>
+        <form id="complete-form" novalidate>
+          <label for="complete-username">Username</label>
+          <input id="complete-username" name="username" autocomplete="username" required
+                 autocapitalize="none" spellcheck="false" maxlength="32">
+          <label for="complete-name">Your name <span class="optional">(optional)</span></label>
+          <input id="complete-name" name="display_name" autocomplete="name" maxlength="60">
+          <label for="complete-password">Password</label>
+          <div class="password-field">
+            <input id="complete-password" name="password" type="password" required
+                   autocomplete="new-password" minlength="10" maxlength="128"
+                   aria-describedby="complete-password-rule">
+            <button type="button" class="show-password" aria-label="Show password">Show</button>
+          </div>
+          <p class="field-rule" id="complete-password-rule">At least 10 characters.</p>
+          <label for="complete-confirm">Confirm password</label>
+          <input id="complete-confirm" name="confirm" type="password" required
+                 autocomplete="new-password" maxlength="128">
+          <button type="submit" class="primary wide">Create account</button>
+        </form>
+      </div>
+
+      <!-- Guest trial over -->
+      <div class="auth-view" id="view-trial" hidden>
+        <p class="step-title">Your guest trial has ended</p>
+        <p class="step-note">Connect Google, GitHub or a phone number to keep your account and
+          everything you've recorded.</p>
+        <div class="providers" data-intent="link"></div>
+        <button type="button" class="quiet" id="logout">Log out</button>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="js/login.js"></script>
+</body>
+</html>
