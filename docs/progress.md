@@ -47,7 +47,8 @@ Each phase is one commit, so the history shows how the app was built up.
 | Web app docs | `2a84522` |
 | Benchmark rerun at 5/10/15 FPS (nobody in frame) | `a3d867c` |
 | This progress log; docs-update rule in `CLAUDE.md` | `8ec1746` |
-| README pictures: pipeline and posture diagrams, web app screenshots (light and dark), state machine | this commit |
+| README pictures: pipeline and posture diagrams, web app screenshots (light and dark), state machine | `26da4d5`, `27bfa01` |
+| `scripts/make_demo_data.py` and steps for retaking the README screenshots | this commit |
 
 ## Fixes from the code review (2026-11-15)
 

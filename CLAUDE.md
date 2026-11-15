@@ -22,8 +22,10 @@ Side inputs: calibration baseline (data/output/baseline.json), tray icon (pystra
 - data/examples/  labelled landmark JSON used by tests (coordinates only)
 - data/input/     recorded test videos (gitignored)
 - data/output/    runtime files (gitignored)
-- scripts/        PowerShell setup/run, benchmark.py, make_examples.py
+- scripts/        PowerShell setup/run, benchmark.py, make_examples.py,
+                  make_demo_data.py (fake sessions for README screenshots)
 - docs/           architecture.md, usage.md, progress.md (status log), benchmarks.md (generated)
+                  images/ (README diagrams + screenshots; how to retake: usage.md)
 - backend/        FastAPI web server: protocol.py (WS messages), session.py (pure,
                   reuses src/engine), app.py (routes, request guard + I/O),
                   security.py. No OpenCV/MediaPipe.

@@ -110,3 +110,16 @@ Everything stays in `data/output/` (gitignored). No camera frames are saved.
   `events` (`slouch_start`, `alert`, `recovered`, `away` with the score) and
   `labels` (from `--label` sessions)
 - `app.log`: log file for the background run
+
+## Retaking the README screenshots
+The pictures in `docs/images/` come from a demo account with made-up sessions, so
+your real history never shows up and no camera frames are involved.
+```powershell
+$env:DB_PATH = "data/output/demo.db"; $env:SECRET_KEY_PATH = "data/output/demo-secret.key"
+python -m backend --port 8001      # sign up as a guest at http://127.0.0.1:8001
+python scripts\make_demo_data.py --user <that username>   # 14 days of sessions
+```
+Take the screenshots at 1280 px wide. For the dark one, load the page already in
+dark mode: switching themes on an open page fades the buttons for a moment, and a
+screenshot taken then shows them grey. Delete `data/output/demo*` when done.
+`pipeline.svg` and `posture-features.svg` are hand-written SVG; edit them directly.
