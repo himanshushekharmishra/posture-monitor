@@ -11,6 +11,17 @@ class Point:
 
 
 @dataclass(frozen=True)
+class PostureSample:
+    """Raw per-frame measurements, before comparing with a baseline."""
+
+    neck_ratio: float
+    shoulder_width: float
+    shoulder_tilt: float
+    head_tilt: float
+    visibility: float
+
+
+@dataclass(frozen=True)
 class PostureFeatures:
     neck_ratio: float
     lean_ratio: float

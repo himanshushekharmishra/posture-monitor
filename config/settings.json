@@ -6,6 +6,8 @@
   "model_path": "models/pose_landmarker_lite.task",
   "min_visibility": 0.5,
   "calibration_seconds": 5,
+  "calibration_countdown_seconds": 3,
+  "calibration_min_samples": 10,
   "ema_alpha": 0.3,
   "weights": { "neck": 0.5, "lean": 0.3, "shoulder_tilt": 0.1, "head_tilt": 0.1 },
   "tilt_norm_degrees": 15,

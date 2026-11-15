@@ -23,7 +23,10 @@ def main() -> None:
     args = parse_args()
     settings = load_settings()
     if args.calibrate:
-        raise SystemExit("--calibrate arrives in Phase 2.")
+        from src.workflows import calibrate_flow
+
+        ok = calibrate_flow.run(settings, root=ROOT) is not None
+        raise SystemExit(0 if ok else 1)
     from src.workflows import monitor_loop
 
     monitor_loop.run(settings, debug=args.debug, root=ROOT)
