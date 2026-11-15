@@ -44,6 +44,10 @@ See [docs/architecture.md](docs/architecture.md).
 Settings are in `config/settings.json`; override any of them per machine in
 `.env` (see `config/env.example`). More in [docs/usage.md](docs/usage.md).
 
+## Status
+All five build phases and the web app are done; 71 tests pass. What's been
+checked and what's left: [docs/progress.md](docs/progress.md).
+
 ## Results
 About 0.5% CPU and 12 ms per frame at 5 FPS on a Ryzen 7 5800H, measured so far
 with nobody in frame, so expect somewhat more while it tracks you. Full numbers and

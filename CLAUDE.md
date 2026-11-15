@@ -23,7 +23,7 @@ Side inputs: calibration baseline (data/output/baseline.json), tray icon (pystra
 - data/input/     recorded test videos (gitignored)
 - data/output/    runtime files (gitignored)
 - scripts/        PowerShell setup/run, benchmark.py, make_examples.py
-- docs/           architecture.md, usage.md, benchmarks.md (generated)
+- docs/           architecture.md, usage.md, progress.md (status log), benchmarks.md (generated)
 - backend/        FastAPI web server: protocol.py (WS messages), session.py (pure,
                   reuses src/engine), app.py (routes + I/O). No OpenCV/MediaPipe.
 - frontend/       plain HTML/CSS/JS, no build step; MediaPipe runs in the browser
@@ -52,6 +52,10 @@ Side inputs: calibration baseline (data/output/baseline.json), tray icon (pystra
 - Target OS is Windows; scripts are PowerShell.
 - Run `pytest -q` and keep it green before every commit.
 - Work one build phase at a time; don't implement later phases early.
+- Keep the .md files current: with every change, update docs/progress.md (status,
+  commit table, what's checked, what's left) and any README/usage/architecture
+  text the change makes out of date, in the same commit.
+- One commit per phase or feature, so the history shows how the work progressed.
 
 ## Landmarks used (MediaPipe Pose, 33 points, normalized 0-1)
 0 nose, 7 left ear, 8 right ear, 11 left shoulder, 12 right shoulder.
@@ -67,9 +71,11 @@ Side inputs: calibration baseline (data/output/baseline.json), tray icon (pystra
 AWAY (no person for away_timeout) | GOOD | SLOUCHING (< persist_seconds) |
 ALERTED (notify, then cooldown). Recovery -> GOOD, logged as `recovered`.
 
-## Build phases
-1. capture + pose + debug overlay (skeleton drawn at ~5 FPS)
-2. features + calibration
-3. state machine + notifier
-4. logger + tray + headless run
-5. tests + benchmark numbers in docs/benchmarks.md            <- CURRENT
+## Build phases (all done; details and what's left in docs/progress.md)
+1. capture + pose + debug overlay (skeleton drawn at ~5 FPS)   done
+2. features + calibration                                      done
+3. state machine + notifier                                    done
+4. logger + tray + headless run                                done
+5. tests + benchmark numbers in docs/benchmarks.md             done
+Since then: .env overrides, landmark examples, --video, --label, web app
+(backend/ + frontend/). Next steps are user checks listed in docs/progress.md.
