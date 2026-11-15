@@ -60,5 +60,5 @@ ALERTED (notify, then cooldown). Recovery -> GOOD, logged as `recovered`.
 1. capture + pose + debug overlay (skeleton drawn at ~5 FPS)
 2. features + calibration
 3. state machine + notifier
-4. logger + tray + headless run                              <- CURRENT
-5. tests + benchmark numbers in docs/benchmarks.md
+4. logger + tray + headless run
+5. tests + benchmark numbers in docs/benchmarks.md            <- CURRENT

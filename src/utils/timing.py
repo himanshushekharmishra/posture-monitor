@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import time
+from dataclasses import dataclass
 from types import TracebackType
 from typing import Callable
 
@@ -63,3 +64,35 @@ class LatencyTimer:
         tb: TracebackType | None,
     ) -> None:
         self.ms = (self._clock() - self._start) * 1000.0
+
+
+def percentile(values: list[float], pct: float) -> float:
+    """Linear-interpolated percentile (pct in 0..100) of a non-empty list."""
+    if not values:
+        raise ValueError("no values")
+    if not 0 <= pct <= 100:
+        raise ValueError("pct must be in 0..100")
+    s = sorted(values)
+    k = (len(s) - 1) * pct / 100
+    lo = int(k)
+    hi = min(lo + 1, len(s) - 1)
+    return s[lo] + (s[hi] - s[lo]) * (k - lo)
+
+
+@dataclass(frozen=True)
+class LatencyStats:
+    count: int
+    mean: float
+    p50: float
+    p95: float
+    max: float
+
+    @classmethod
+    def from_values(cls, values: list[float]) -> LatencyStats:
+        return cls(
+            count=len(values),
+            mean=sum(values) / len(values),
+            p50=percentile(values, 50),
+            p95=percentile(values, 95),
+            max=max(values),
+        )

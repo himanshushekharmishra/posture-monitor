@@ -52,3 +52,24 @@ def test_latency_timer_reports_ms():
     with LatencyTimer(clock=clock) as t:
         clock.t = 0.042
     assert math.isclose(t.ms, 42.0)
+
+
+def test_percentile_interpolates():
+    from src.utils.timing import percentile
+
+    vals = [10.0, 20.0, 30.0, 40.0]
+    assert percentile(vals, 0) == 10
+    assert percentile(vals, 100) == 40
+    assert math.isclose(percentile(vals, 50), 25)
+    assert percentile([7.0], 95) == 7
+    with pytest.raises(ValueError):
+        percentile([], 50)
+
+
+def test_latency_stats_from_values():
+    from src.utils.timing import LatencyStats
+
+    s = LatencyStats.from_values([1.0, 2.0, 3.0, 4.0, 100.0])
+    assert s.count == 5 and s.max == 100 and s.p50 == 3
+    assert math.isclose(s.mean, 22.0)
+    assert s.p95 > s.p50
