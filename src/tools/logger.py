@@ -156,6 +156,21 @@ class SessionLogger:
             ).fetchone()
         return int(row[0])
 
+    def recent_sessions(self, limit: int = 10) -> list[dict]:
+        """Newest first, with event counts, for the web dashboard."""
+        with self._lock:
+            rows = self._conn.execute(
+                """
+                SELECT s.id, s.started_at, s.ended_at, s.avg_cpu, s.avg_latency_ms,
+                       SUM(e.type = 'alert'), SUM(e.type = 'slouch_start')
+                FROM sessions s LEFT JOIN events e ON e.session_id = s.id
+                GROUP BY s.id ORDER BY s.id DESC LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        keys = ("id", "started_at", "ended_at", "avg_cpu", "avg_latency_ms", "alerts", "slouches")
+        return [dict(zip(keys, (*r[:5], int(r[5] or 0), int(r[6] or 0)))) for r in rows]
+
     def alerts_today(self) -> int:
         return self.count_events("alert")
 

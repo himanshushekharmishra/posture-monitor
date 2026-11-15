@@ -6,3 +6,6 @@ pystray
 Pillow
 psutil
 pytest
+fastapi
+uvicorn[standard]
+httpx

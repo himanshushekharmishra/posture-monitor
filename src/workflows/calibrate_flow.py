@@ -1,7 +1,6 @@
 """Record baseline while the user sits upright.  Phase 2."""
 from __future__ import annotations
 
-import json
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -9,29 +8,15 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from src.engine.calibration import baseline_from_dict, baseline_to_dict, build_baseline
+from src.engine.calibration import build_baseline
 from src.engine.features import measure
 from src.schemas.models import Baseline, PostureSample
+from src.tools.baseline_store import load_baseline, save_baseline  # noqa: F401 (re-export)
 from src.tools.capture import Camera
 from src.tools.pose import PoseEstimator, draw_skeleton
 from src.utils.timing import FrameThrottle
 
 WINDOW = "Posture Monitor - calibration (Esc to cancel)"
-
-
-def save_baseline(b: Baseline, path: Path) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(baseline_to_dict(b), indent=2), encoding="utf-8")
-
-
-def load_baseline(path: Path) -> Baseline | None:
-    if not path.is_file():
-        return None
-    try:
-        return baseline_from_dict(json.loads(path.read_text(encoding="utf-8")))
-    except (ValueError, KeyError, TypeError) as e:
-        print(f"Ignoring unreadable baseline {path}: {e}")
-        return None
 
 
 def _show(frame: np.ndarray, text: str) -> bool:
