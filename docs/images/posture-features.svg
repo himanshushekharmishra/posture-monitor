@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 400" width="960" height="400" font-family="Segoe UI, system-ui, -apple-system, sans-serif">
+  <title>How slouching is measured: the ear-to-shoulder gap shrinks and the shoulders look wider</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fbfdff"/>
+      <stop offset="1" stop-color="#eef5fd"/>
+    </linearGradient>
+    <marker id="tick" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <line x1="5" y1="0" x2="5" y2="10" stroke="#f0a020" stroke-width="2"/>
+    </marker>
+  </defs>
+  <rect x="0.5" y="0.5" width="959" height="399" rx="18" fill="url(#bg)" stroke="#d4e4f5"/>
+
+  <!-- ===== Upright ===== -->
+  <g transform="translate(40,30)">
+    <rect width="420" height="300" rx="14" fill="#0f2036"/>
+    <rect x="14" y="14" width="96" height="26" rx="13" fill="#2f8a5f"/>
+    <text x="62" y="32" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">GOOD</text>
+    <!-- body silhouette -->
+    <path d="M110,300 C110,215 150,200 210,200 C270,200 310,215 310,300 Z" fill="#1d3557"/>
+    <rect x="196" y="150" width="28" height="56" rx="10" fill="#1d3557"/>
+    <ellipse cx="210" cy="112" rx="40" ry="50" fill="#1d3557"/>
+    <!-- skeleton -->
+    <g stroke="#5aa2f0" stroke-width="3" stroke-linecap="round">
+      <line x1="140" y1="210" x2="280" y2="210"/>
+      <line x1="172" y1="118" x2="248" y2="118"/>
+    </g>
+    <g fill="#f0a020">
+      <circle cx="210" cy="108" r="6"/>
+      <circle cx="172" cy="118" r="6"/><circle cx="248" cy="118" r="6"/>
+      <circle cx="140" cy="210" r="6"/><circle cx="280" cy="210" r="6"/>
+    </g>
+    <!-- neck gap -->
+    <line x1="330" y1="118" x2="330" y2="210" stroke="#f0a020" stroke-width="2" marker-start="url(#tick)" marker-end="url(#tick)"/>
+    <text x="342" y="160" font-size="13" font-weight="700" fill="#f6c46a">ear to</text>
+    <text x="342" y="176" font-size="13" font-weight="700" fill="#f6c46a">shoulder</text>
+    <!-- shoulder width -->
+    <line x1="140" y1="240" x2="280" y2="240" stroke="#9db2cc" stroke-width="2" marker-start="url(#tick)" marker-end="url(#tick)"/>
+    <text x="210" y="262" text-anchor="middle" font-size="12.5" fill="#cfe0f3">shoulder width</text>
+  </g>
+  <text x="250" y="358" text-anchor="middle" font-size="15" font-weight="700" fill="#102a43">Upright: neck_ratio near your baseline</text>
+  <text x="250" y="380" text-anchor="middle" font-size="13" fill="#486581">score stays low</text>
+
+  <!-- ===== Slouching ===== -->
+  <g transform="translate(500,30)">
+    <rect width="420" height="300" rx="14" fill="#0f2036"/>
+    <rect x="14" y="14" width="112" height="26" rx="13" fill="#b7791f"/>
+    <text x="70" y="32" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">SLOUCHING</text>
+    <!-- body silhouette: closer (wider) and head lower -->
+    <path d="M85,300 C85,205 140,190 210,190 C280,190 335,205 335,300 Z" fill="#1d3557"/>
+    <ellipse cx="210" cy="148" rx="46" ry="56" fill="#1d3557"/>
+    <!-- skeleton -->
+    <g stroke="#5aa2f0" stroke-width="3" stroke-linecap="round">
+      <line x1="122" y1="204" x2="298" y2="204"/>
+      <line x1="166" y1="156" x2="254" y2="154"/>
+    </g>
+    <g fill="#f0a020">
+      <circle cx="210" cy="146" r="6"/>
+      <circle cx="166" cy="156" r="6"/><circle cx="254" cy="154" r="6"/>
+      <circle cx="122" cy="204" r="6"/><circle cx="298" cy="204" r="6"/>
+    </g>
+    <!-- neck gap -->
+    <line x1="352" y1="155" x2="352" y2="204" stroke="#f0a020" stroke-width="2" marker-start="url(#tick)" marker-end="url(#tick)"/>
+    <text x="362" y="176" font-size="13" font-weight="700" fill="#f6c46a">shorter</text>
+    <!-- shoulder width -->
+    <line x1="122" y1="236" x2="298" y2="236" stroke="#9db2cc" stroke-width="2" marker-start="url(#tick)" marker-end="url(#tick)"/>
+    <text x="210" y="258" text-anchor="middle" font-size="12.5" fill="#cfe0f3">wider: leaning in</text>
+  </g>
+  <text x="710" y="358" text-anchor="middle" font-size="15" font-weight="700" fill="#102a43">Head forward: neck_ratio drops, lean_ratio rises</text>
+  <text x="710" y="380" text-anchor="middle" font-size="13" fill="#486581">score climbs; alert if it lasts 30 s</text>
+</svg>

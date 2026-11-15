@@ -3,7 +3,7 @@
 Where the project stands, what has been checked, and what is left. Update this file
 with every change (see the rule in `CLAUDE.md`).
 
-Last updated: 2026-11-15, on `main`, after the new look for the web pages.
+Last updated: 2026-11-15, on `main`, after adding pictures to the README.
 
 ## Status at a glance
 
@@ -47,6 +47,7 @@ Each phase is one commit, so the history shows how the app was built up.
 | Web app docs | `2a84522` |
 | Benchmark rerun at 5/10/15 FPS (nobody in frame) | `a3d867c` |
 | This progress log; docs-update rule in `CLAUDE.md` | `8ec1746` |
+| README pictures: pipeline and posture diagrams, web app screenshots (light and dark), state machine | this commit |
 
 ## Fixes from the code review (2026-11-15)
 
@@ -87,7 +88,7 @@ previous sessions, a slouch meter and settings.
 | Login and sign-up page; app page shows the account, log out, guest trial days | done | `8dd324d` |
 | Dashboard backend: session history, slouch insights, profile edit, password change, delete account | done | `c24d042` |
 | Dashboard pages: side menu, profile, previous sessions, slouch meter, settings | done | `b2bf86f` |
-| New look: sky blue and white colours, floating buttons, a real dropdown menu, login errors under the field | done | this commit |
+| New look: sky blue and white colours, floating buttons, a real dropdown menu, login errors under the field | done | `2652edb` |
 
 Security built in: scrypt password hashes; session cookies that are HttpOnly,
 SameSite=Lax and Secure on https, stored only as hashes; lockout after 8 wrong
@@ -175,7 +176,8 @@ Needs you:
 6. Save a few real poses with `s` in `--debug` and label them in `data/examples/`.
 
 Optional:
-- Push to GitHub (there's no remote yet).
+- Invite friends as collaborators on the private GitHub repo
+  (github.com/Ayushman2804/posture-monitor, pushed 2026-11-15).
 - FastAPI's test client prints a deprecation warning about `httpx`; harmless.
 
 ## Known limits
