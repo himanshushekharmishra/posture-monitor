@@ -1,0 +1,11 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+CLAUDE.local.md
+models/*.task
+data/input/*
+data/output/*
+!data/**/.gitkeep
