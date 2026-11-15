@@ -26,5 +26,18 @@
   "web_host": "127.0.0.1",
   "web_port": 8000,
   "web_allowed_hosts": ["127.0.0.1", "localhost", "::1"],
-  "baseline_path": "data/output/baseline.json"
+  "baseline_path": "data/output/baseline.json",
+  "web_public_url": "http://127.0.0.1:8000",
+  "auth_session_days": 7,
+  "guest_trial_days": 14,
+  "otp_ttl_minutes": 5,
+  "secret_key_path": "data/output/secret.key",
+  "sms_provider": "console",
+  "google_client_id": "",
+  "google_client_secret": "",
+  "github_client_id": "",
+  "github_client_secret": "",
+  "twilio_account_sid": "",
+  "twilio_auth_token": "",
+  "twilio_from_number": ""
 }

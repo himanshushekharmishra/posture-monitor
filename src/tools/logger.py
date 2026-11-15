@@ -1,7 +1,7 @@
 """SQLite session/event logger.  Phase 4.
 
 CREATE TABLE sessions (id INTEGER PRIMARY KEY, started_at TEXT, ended_at TEXT,
-                       avg_cpu REAL, avg_latency_ms REAL);
+                       avg_cpu REAL, avg_latency_ms REAL, user_id INTEGER);
 CREATE TABLE events (id INTEGER PRIMARY KEY, session_id INTEGER REFERENCES sessions(id),
                      ts TEXT, type TEXT CHECK(type IN ('slouch_start','alert','recovered','away')),
                      score REAL);
@@ -27,7 +27,7 @@ from pathlib import Path
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS sessions (
     id INTEGER PRIMARY KEY, started_at TEXT, ended_at TEXT,
-    avg_cpu REAL, avg_latency_ms REAL
+    avg_cpu REAL, avg_latency_ms REAL, user_id INTEGER
 );
 CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY, session_id INTEGER REFERENCES sessions(id),
@@ -75,18 +75,25 @@ def _now_iso(ts: datetime | None = None) -> str:
 class SessionLogger:
     """One monitoring session per instance. Safe to query from another thread."""
 
-    def __init__(self, db_path: Path) -> None:
+    def __init__(self, db_path: Path, owner: int | None = None) -> None:
+        """`owner` is a web account id; None means the desktop app. Every write and
+        query is limited to that owner's sessions, so accounts never see each other's."""
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(str(db_path), check_same_thread=False)
         self._lock = threading.Lock()
+        self.owner = owner
         self.session_id: int | None = None
         with self._lock, self._conn:
             self._conn.executescript(SCHEMA)
+            cols = {r[1] for r in self._conn.execute("PRAGMA table_info(sessions)")}
+            if "user_id" not in cols:  # databases from before web accounts
+                self._conn.execute("ALTER TABLE sessions ADD COLUMN user_id INTEGER")
 
     def start_session(self, ts: datetime | None = None) -> int:
         with self._lock, self._conn:
             cur = self._conn.execute(
-                "INSERT INTO sessions (started_at) VALUES (?)", (_now_iso(ts),)
+                "INSERT INTO sessions (started_at, user_id) VALUES (?, ?)",
+                (_now_iso(ts), self.owner),
             )
         self.session_id = int(cur.lastrowid)
         return self.session_id
@@ -114,15 +121,19 @@ class SessionLogger:
             )
 
     def label_summary(self, session_id: int | None = None) -> LabelSummary:
-        """Totals over all labelled sessions, or just one."""
-        where, args = ("WHERE l.session_id = ?", (session_id,)) if session_id else ("", ())
+        """Totals over this owner's labelled sessions, or just one session."""
+        where = "JOIN sessions s ON s.id = l.session_id WHERE s.user_id IS ?"
+        args: tuple = (self.owner,)
+        if session_id:
+            where += " AND l.session_id = ?"
+            args += (session_id,)
         with self._lock:
             counts = dict(self._conn.execute(
                 f"SELECT kind, COUNT(*) FROM labels l {where} GROUP BY kind", args
             ).fetchall())
             rows = self._conn.execute(
                 "SELECT started_at, ended_at FROM sessions WHERE id IN "
-                f"(SELECT DISTINCT session_id FROM labels l {where})", args
+                f"(SELECT DISTINCT l.session_id FROM labels l {where})", args
             ).fetchall()
         minutes = sum(
             (datetime.fromisoformat(end) - datetime.fromisoformat(start)).total_seconds() / 60
@@ -151,8 +162,9 @@ class SessionLogger:
         day_str = (day or datetime.now().astimezone().date()).isoformat()
         with self._lock:
             row = self._conn.execute(
-                "SELECT COUNT(*) FROM events WHERE type = ? AND substr(ts, 1, 10) = ?",
-                (kind, day_str),
+                "SELECT COUNT(*) FROM events e JOIN sessions s ON s.id = e.session_id "
+                "WHERE e.type = ? AND substr(e.ts, 1, 10) = ? AND s.user_id IS ?",
+                (kind, day_str, self.owner),
             ).fetchone()
         return int(row[0])
 
@@ -164,9 +176,10 @@ class SessionLogger:
                 SELECT s.id, s.started_at, s.ended_at, s.avg_cpu, s.avg_latency_ms,
                        SUM(e.type = 'alert'), SUM(e.type = 'slouch_start')
                 FROM sessions s LEFT JOIN events e ON e.session_id = s.id
+                WHERE s.user_id IS ?
                 GROUP BY s.id ORDER BY s.id DESC LIMIT ?
                 """,
-                (limit,),
+                (self.owner, limit),
             ).fetchall()
         keys = ("id", "started_at", "ended_at", "avg_cpu", "avg_latency_ms", "alerts", "slouches")
         return [dict(zip(keys, (*r[:5], int(r[5] or 0), int(r[6] or 0)))) for r in rows]

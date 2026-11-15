@@ -12,7 +12,7 @@ Last updated: 2026-11-15, on `main`, after the code review fixes.
 | Desktop app (5 build phases) | done |
 | Web app (`backend/` + `frontend/`) | done; live webcam in the page not yet tried by a person |
 | Code review | done: 16 problems found and fixed (table below) |
-| Tests | 87 passing (`pytest -q`) |
+| Tests | 111 passing (`pytest -q`) |
 | Benchmarks | measured, but only with nobody in frame |
 | Alert precision | not measured yet (needs a 30-minute labelled session) |
 
@@ -74,6 +74,30 @@ Each problem below was reproduced first, then fixed with a test that covers it.
 Also re-checked after these fixes: the real web page still connects (its own
 origin is accepted), a request with a foreign Host header gets 400, and a running
 desktop monitor reloaded a baseline written by another process mid-run.
+
+## Web accounts (in progress)
+
+Goal: a secure login page (log in / sign up with Google, GitHub or phone, or a guest
+trial; every account has a username and password), then a dashboard with profile,
+previous sessions, a slouch meter and settings.
+
+| Step | State | Commit |
+|---|---|---|
+| Backend: accounts, sessions, phone codes, Google/GitHub OAuth, per-account data | done | this commit |
+| Login and sign-up page | next | |
+| Dashboard (profile, previous sessions, slouch meter, settings) | later | |
+
+Security built in: scrypt password hashes; session cookies that are HttpOnly,
+SameSite=Lax and Secure on https, stored only as hashes; lockout after 8 wrong
+passwords and per-network rate limits; single-use 6-digit phone codes that expire
+in 5 minutes, stored as HMACs, with limited guesses; OAuth with `state`, PKCE and
+a browser-bound cookie; cross-site and non-JSON writes refused; strict security
+headers (CSP, no framing); the same error for unknown users and wrong passwords.
+
+Needs you: Google and GitHub sign-in work once you register the app and put the
+IDs in `.env` (steps in `config/env.example`); real SMS needs a Twilio account.
+Until then phone codes are printed in the server window, and only for people on
+the same computer.
 
 ## What has been checked
 

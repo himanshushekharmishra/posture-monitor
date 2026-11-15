@@ -96,11 +96,23 @@ def web(tmp_path):
     (tmp_path / "frontend").mkdir()
     (tmp_path / "frontend" / "index.html").write_text("<h1>hi</h1>")
     clock = FakeClock()
-    settings = dict(SETTINGS)
-    settings["web_allowed_hosts"] = [*SETTINGS["web_allowed_hosts"], "testserver"]  # TestClient's host
-    app = create_app(settings, tmp_path, clock=clock)
+    app = create_app(web_settings(), tmp_path, clock=clock)
     with TestClient(app) as client:
+        signup_guest(client, "tester")
         yield client, clock, tmp_path
+
+
+def web_settings():
+    settings = dict(SETTINGS)
+    settings["web_allowed_hosts"] = [*SETTINGS["web_allowed_hosts"], "testserver"]  # TestClient
+    return settings
+
+
+def signup_guest(client, username):
+    r = client.post("/api/auth/signup",
+                    json={"username": username, "password": "correct horse battery", "guest": True})
+    assert r.status_code == 201, r.text
+    return r.json()
 
 
 def test_rest_endpoints(web):
@@ -139,7 +151,7 @@ def test_websocket_calibrate_alert_label(web):
         msgs = send_frames(ws, up, CAL_SECONDS + 1)
         assert any(m["calibration"] and m["calibration"]["phase"] == "done" for m in msgs)
         assert msgs[-1]["calibrated"] is True
-        assert (root / SETTINGS["baseline_path"]).is_file()
+        assert not (root / SETTINGS["baseline_path"]).exists()  # web calibration is per account
         assert client.get("/api/baseline").status_code == 200
 
         msgs = send_frames(ws, fwd, SETTINGS["persist_seconds"] + 3)
@@ -212,18 +224,23 @@ def test_malformed_messages_get_an_error_and_keep_the_socket_open(web):
         assert ws.receive_json()["type"] == "frame"
 
 
-def test_baseline_written_by_the_desktop_app_is_picked_up(web):
-    from src.engine.calibration import build_baseline
-    from src.engine.features import measure
-    from src.tools.baseline_store import save_baseline
-
+def test_accounts_do_not_see_each_others_data(web, tmp_path):
     client, clock, root = web
+    up = as_wire(UPRIGHT)
+    with client.websocket_connect("/ws") as ws:
+        ws.receive_json()
+        ws.send_json({"type": "calibrate"})
+        ws.receive_json()
+        for _ in range(int((CAL_SECONDS + 1) * FPS)):
+            ws.send_json({"type": "frame", "landmarks": up})
+            ws.receive_json()
+            clock.t += 1 / FPS
+    assert client.get("/api/baseline").status_code == 200
+    assert client.get("/api/stats").json()["recent_sessions"]
+
+    client.post("/api/auth/logout", json={})
+    signup_guest(client, "someone-else")
+    assert client.get("/api/baseline").status_code == 404
+    assert client.get("/api/stats").json()["recent_sessions"] == []
     with client.websocket_connect("/ws") as ws:
         assert ws.receive_json()["calibrated"] is False
-        # The desktop app calibrates while the page is open.
-        save_baseline(build_baseline([measure(UPRIGHT["points"])], "desktop"),
-                      root / SETTINGS["baseline_path"])
-        clock.t += 3  # past the watcher's check interval
-        ws.send_json({"type": "frame", "landmarks": as_wire(UPRIGHT)})
-        msg = ws.receive_json()
-        assert msg["calibrated"] is True and msg["note"] == ""

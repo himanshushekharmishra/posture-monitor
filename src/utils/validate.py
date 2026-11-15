@@ -56,4 +56,14 @@ def settings_problems(s: dict) -> list[str]:
 
     if "web_port" in s and not (isinstance(s["web_port"], int) and 1 <= s["web_port"] <= 65535):
         problems.append(f"web_port must be a port number 1-65535 (got {s['web_port']!r})")
+
+    # Web accounts (only checked when present, so older configs still load).
+    for k in ("auth_session_days", "guest_trial_days", "otp_ttl_minutes"):
+        if k in s and not (isinstance(s[k], int) and not isinstance(s[k], bool) and s[k] > 0):
+            problems.append(f"{k} must be a whole number greater than 0 (got {s[k]!r})")
+    url = s.get("web_public_url")
+    if url is not None and not (isinstance(url, str) and url.startswith(("http://", "https://"))):
+        problems.append(f"web_public_url must start with http:// or https:// (got {url!r})")
+    if s.get("sms_provider", "off") not in ("console", "twilio", "off"):
+        problems.append(f"sms_provider must be console, twilio or off (got {s['sms_provider']!r})")
     return problems
