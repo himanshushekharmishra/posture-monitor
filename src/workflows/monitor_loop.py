@@ -87,7 +87,22 @@ class MonitorControl:
         if new != self.status:
             self.status = new
             if self.on_status:
-                self.on_status(new)
+                try:
+                    self.on_status(new)
+                except Exception:  # a tray hiccup must never stop monitoring
+                    log.exception("Status listener failed")
+
+
+def _recalibrate(settings: dict, root: Path, tray: bool) -> Baseline | None:
+    """Run calibration; on failure (e.g. camera in use) log, tell the user, carry on."""
+    try:
+        return calibrate_flow.run(settings, root=root)
+    except (RuntimeError, OSError) as e:
+        log.warning("Calibration failed: %s", e)
+        if tray:
+            notify("Posture Monitor", f"Couldn't calibrate: {e}. Close other apps using the "
+                                      "camera and try Recalibrate again.")
+        return None
 
 
 class AlertLabeller:
@@ -204,7 +219,7 @@ def run(
                 if control.take_recalibrate():
                     control.publish(note="calibrating", paused=False)
                     log.info("Recalibrating")
-                    new = calibrate_flow.run(settings, root=root)
+                    new = _recalibrate(settings, root, tray)
                     if new is not None:
                         baseline = new
                         machine.reset()
@@ -334,8 +349,13 @@ def run(
 
 def run_headless(settings: dict, root: Path | None = None) -> None:
     """Monitor in a background thread with a tray icon on the main thread."""
+    from src.tools import single_instance
     from src.tools.tray import TrayApp
 
+    if not single_instance.acquire():
+        log.warning("Another Posture Monitor is already running; exiting")
+        notify("Posture Monitor", "Already running. Look for its icon in the system tray.")
+        return
     control = MonitorControl()
     tray = TrayApp(
         on_toggle_pause=control.toggle_pause,
