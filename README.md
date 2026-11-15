@@ -45,7 +45,7 @@ Settings are in `config/settings.json`; override any of them per machine in
 `.env` (see `config/env.example`). More in [docs/usage.md](docs/usage.md).
 
 ## Status
-All five build phases and the web app are done; 71 tests pass. What's been
+All five build phases and the web app are done, and a code review fixed 16 problems; 87 tests pass. What's been
 checked and what's left: [docs/progress.md](docs/progress.md).
 
 ## Results
