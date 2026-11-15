@@ -12,7 +12,7 @@ Last updated: 2026-11-15, on `main`, after the code review fixes.
 | Desktop app (5 build phases) | done |
 | Web app (`backend/` + `frontend/`) | done, with accounts; live webcam in the page not yet tried by a person |
 | Code review | done: 16 problems found and fixed (table below) |
-| Tests | 121 passing (`pytest -q`) |
+| Tests | 122 passing (`pytest -q`) |
 | Benchmarks | measured, but only with nobody in frame |
 | Alert precision | not measured yet (needs a 30-minute labelled session) |
 
@@ -117,6 +117,18 @@ Needs you: Google and GitHub sign-in work once you register the app and put the
 IDs in `.env` (steps in `config/env.example`); real SMS needs a Twilio account.
 Until then phone codes are printed in the server window, and only for people on
 the same computer.
+
+## Found while testing on your laptop (2026-11-15)
+
+| Problem | Fix | Commit |
+|---|---|---|
+| "Start camera" said "Close other apps using it" for every failure, including when no camera exists | separate messages for blocked permission, no camera found (check the laptop's camera key or privacy switch) and camera in use | this commit |
+| Browsers could keep running old scripts from their cache after an update | `.js`, `.css` and `.html` are revalidated on every load (unchanged files return a cheap 304) | this commit |
+
+Camera status on this laptop: Windows lists the "Integrated Camera" with status
+Unknown (not connected) and neither Chrome nor Python can open it, although it
+worked earlier the same day and every camera privacy setting is on (Allow). Most
+likely the camera privacy key or switch is on. Not something the app can fix.
 
 ## What has been checked
 

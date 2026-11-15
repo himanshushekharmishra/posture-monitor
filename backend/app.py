@@ -152,6 +152,10 @@ def create_app(
             response.headers.setdefault(k, v)
         if path in APP_PAGES or path == LOGIN_PAGE or path.startswith("/api/"):
             response.headers["Cache-Control"] = "no-store"
+        elif path.endswith((".js", ".css", ".html")):
+            # Check for a newer version on every load (unchanged files come back as a cheap
+            # 304), so an updated app never runs with old scripts from the browser cache.
+            response.headers["Cache-Control"] = "no-cache"
         return response
 
     app.include_router(auth.router)

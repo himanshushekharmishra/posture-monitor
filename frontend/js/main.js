@@ -148,6 +148,26 @@ function tick() {
   });
 }
 
+/** What went wrong with the camera, and what to do about it. */
+function cameraErrorText(err) {
+  switch (err.name) {
+    case "NotAllowedError":
+    case "SecurityError":
+      return "Camera access is blocked for this site. Allow it with the camera icon in the " +
+        "address bar, then start the camera again.";
+    case "NotFoundError":
+    case "OverconstrainedError":
+      return "No camera found. Check it's connected and not switched off: many laptops have " +
+        "a camera key or a privacy switch that disconnects it. Then start the camera again.";
+    case "NotReadableError":
+    case "AbortError":
+      return "The camera is in use by another app (for example a video call). Close it, then " +
+        "start the camera again.";
+    default:
+      return `Couldn't open the camera (${err.name}). Try again, or restart the browser.`;
+  }
+}
+
 async function startCamera() {
   try {
     app.stream = await navigator.mediaDevices.getUserMedia({
@@ -155,10 +175,7 @@ async function startCamera() {
       audio: false,
     });
   } catch (err) {
-    const reason = err.name === "NotAllowedError"
-      ? "Camera access was blocked. Allow it in the address bar, then start the camera again."
-      : `Couldn't open the camera (${err.name}). Close other apps using it and try again.`;
-    view.setHint(reason, "error");
+    view.setHint(cameraErrorText(err), "error");
     return;
   }
   video.srcObject = app.stream;

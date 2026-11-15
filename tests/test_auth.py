@@ -420,3 +420,19 @@ def test_trial_days_left_rounds_up(store):
     assert s.get_user(u.id).trial_days_left(now()) == 1
     now.t += timedelta(hours=2)
     assert s.get_user(u.id).trial_days_left(now()) == 0
+
+
+def test_scripts_are_revalidated_so_updates_reach_browsers(tmp_path):
+    (tmp_path / "messages").mkdir()
+    shutil.copy(ROOT / "messages" / "alerts.json", tmp_path / "messages")
+    (tmp_path / "frontend" / "js").mkdir(parents=True)
+    (tmp_path / "frontend" / "js" / "app.js").write_text("export {};")
+    settings = dict(SETTINGS)
+    settings["web_allowed_hosts"] = [*SETTINGS["web_allowed_hosts"], "testserver"]
+    app = create_app(settings, tmp_path, sms=FakeSms(),
+                     auth_store=AuthStore(tmp_path / "p.db", secret=b"s" * 32))
+    with TestClient(app) as client:
+        r = client.get("/js/app.js")
+        assert r.status_code == 200 and r.headers["cache-control"] == "no-cache"
+        again = client.get("/js/app.js", headers={"if-none-match": r.headers["etag"]})
+        assert again.status_code == 304  # unchanged files aren't sent again
