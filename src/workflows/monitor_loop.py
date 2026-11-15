@@ -15,7 +15,7 @@ import psutil
 from src.engine.features import deviation_score, extract_features
 from src.engine.state import Ema, PostureStateMachine
 from src.schemas.models import Baseline, MonitorStatus, Point, PostureState
-from src.tools.capture import Camera
+from src.tools.capture import open_source
 from src.tools.examples import save_example
 from src.tools.logger import SessionLogger
 from src.tools.notifier import AlertNotifier, notify
@@ -119,7 +119,11 @@ def run(
     debug: bool = False,
     root: Path | None = None,
     control: MonitorControl | None = None,
+    video: Path | None = None,
+    tray: bool = False,
 ) -> None:
+    """Run until stopped. `video` replaces the webcam with a recording (stops at its end);
+    `tray` means a tray icon is attached (only changes wording and the first-run hint)."""
     root = root or Path.cwd()
     control = control or MonitorControl()
     model_path = str((root / settings["model_path"]).resolve())
@@ -127,11 +131,13 @@ def run(
     min_vis = float(settings["min_visibility"])
     retry_seconds = float(settings["camera_retry_seconds"])
     baseline = load_baseline(baseline_path)
-    uncalibrated_note = "not calibrated - use Recalibrate" if not debug else "not calibrated"
+    uncalibrated_note = "not calibrated - use Recalibrate" if tray else "not calibrated"
     if baseline is None:
         log.warning("No baseline yet; run `python -m src.main --calibrate`. Alerts are off.")
-        if not debug:
+        if tray:
             notify("Posture Monitor", "Not calibrated yet. Choose Recalibrate in the tray menu.")
+    if video is not None:
+        log.info("Reading frames from video %s instead of the webcam", video)
     throttle = FrameThrottle(float(settings["process_fps"]))
     ema = Ema(float(settings["ema_alpha"]))
     machine = PostureStateMachine.from_settings(settings)
@@ -180,11 +186,10 @@ def run(
                 control.publish(paused=False)
 
                 try:
-                    cam = Camera(
-                        settings["camera_index"], settings["frame_width"],
-                        settings["frame_height"],
-                    )
+                    cam = open_source(settings, video)
                 except RuntimeError as e:
+                    if video is not None:
+                        raise  # a broken file won't fix itself; don't retry
                     if not camera_note:
                         log.warning("%s; retrying every %.0f s", e, retry_seconds)
                     camera_note = "camera unavailable"
@@ -202,6 +207,10 @@ def run(
                         throttle.wait()
                         frame = cam.read()
                         if frame is None:
+                            if cam.ended:
+                                log.info("Video finished")
+                                control.stop()
+                                break
                             misses += 1
                             if misses * throttle.interval >= retry_seconds:
                                 log.warning("Camera stopped sending frames; reopening")
@@ -285,7 +294,7 @@ def run_headless(settings: dict, root: Path | None = None) -> None:
 
     def worker() -> None:
         try:
-            run(settings, debug=False, root=root, control=control)
+            run(settings, debug=False, root=root, control=control, tray=True)
         except Exception as e:
             log.exception("Monitor crashed")
             notify("Posture Monitor stopped", f"{type(e).__name__}: {e}")

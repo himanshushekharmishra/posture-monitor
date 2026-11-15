@@ -10,6 +10,7 @@ tracking a person than when the frame is empty.
     python scripts\\benchmark.py                   # process_fps, 10 and 15 FPS, 30 s each
     python scripts\\benchmark.py --fps 5 --seconds 60
     python scripts\\benchmark.py --no-write        # print only
+    python scripts\\benchmark.py --video data\\input\\desk.mp4   # repeatable; loops the video
 """
 from __future__ import annotations
 
@@ -32,7 +33,7 @@ from src.engine.features import deviation_score, extract_features  # noqa: E402
 from src.engine.state import Ema, PostureStateMachine  # noqa: E402
 from src.main import load_settings  # noqa: E402
 from src.schemas.models import Baseline  # noqa: E402
-from src.tools.capture import Camera  # noqa: E402
+from src.tools.capture import open_source  # noqa: E402
 from src.tools.pose import PoseEstimator  # noqa: E402
 from src.utils.timing import FrameThrottle, LatencyStats, LatencyTimer  # noqa: E402
 from src.workflows.calibrate_flow import load_baseline  # noqa: E402
@@ -57,13 +58,14 @@ class PassResult:
 class Pipeline:
     """Everything the monitor does per frame except notifying and logging."""
 
-    def __init__(self, settings: dict, baseline: Baseline | None, model_path: str) -> None:
+    def __init__(
+        self, settings: dict, baseline: Baseline | None, model_path: str,
+        video: Path | None = None,
+    ) -> None:
         self.settings = settings
         self.baseline = baseline
         self.min_vis = float(settings["min_visibility"])
-        self.cam = Camera(
-            settings["camera_index"], settings["frame_width"], settings["frame_height"]
-        )
+        self.cam = open_source(settings, video, loop=True)
         with LatencyTimer() as t:
             self.pose = PoseEstimator(model_path)
         self.model_load_ms = t.ms
@@ -136,8 +138,9 @@ def cpu_name() -> str:
     return platform.processor() or "unknown CPU"
 
 
-def machine_info(settings: dict) -> dict[str, str]:
+def machine_info(settings: dict, video: Path | None = None) -> dict[str, str]:
     return {
+        "Frame source": f"video {video.name} (looped)" if video else "webcam",
         "CPU": f"{cpu_name()} ({psutil.cpu_count(logical=False)} cores / "
                f"{psutil.cpu_count()} threads)",
         "RAM": f"{psutil.virtual_memory().total / 2**30:.1f} GB",
@@ -145,7 +148,8 @@ def machine_info(settings: dict) -> dict[str, str]:
         "Python": platform.python_version(),
         "MediaPipe": mediapipe.__version__,
         "Model": Path(settings["model_path"]).name,
-        "Camera resolution": f"{settings['frame_width']}x{settings['frame_height']}",
+        "Camera resolution": "from the video" if video
+        else f"{settings['frame_width']}x{settings['frame_height']}",
     }
 
 
@@ -244,10 +248,12 @@ def main() -> None:
     ap.add_argument("--fps", type=float, nargs="+",
                     default=sorted({float(settings["process_fps"]), 10.0, 15.0}))
     ap.add_argument("--no-write", action="store_true", help="don't update docs/benchmarks.md")
+    ap.add_argument("--video", type=Path, help="use a recorded video (looped) instead of the webcam")
     args = ap.parse_args()
 
     baseline = load_baseline(ROOT / settings["baseline_path"])
-    pipe = Pipeline(settings, baseline, str((ROOT / settings["model_path"]).resolve()))
+    video = args.video.resolve() if args.video else None
+    pipe = Pipeline(settings, baseline, str((ROOT / settings["model_path"]).resolve()), video)
     results: list[PassResult] = []
     try:
         pipe.run(max(args.fps), args.warmup, record=False)
@@ -274,7 +280,7 @@ def main() -> None:
         print("Note: you were out of frame most of the time; numbers will be optimistic.")
     if not args.no_write:
         DOC_PATH.write_text(
-            render_markdown(results, machine_info(settings), pipe.model_load_ms,
+            render_markdown(results, machine_info(settings, video), pipe.model_load_ms,
                             float(settings["process_fps"]), baseline is not None),
             encoding="utf-8",
         )

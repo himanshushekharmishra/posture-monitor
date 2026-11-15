@@ -20,6 +20,9 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Real-time posture monitor")
     p.add_argument("--debug", action="store_true", help="show live skeleton window")
     p.add_argument("--calibrate", action="store_true", help="record a new baseline")
+    p.add_argument("--video", type=Path, metavar="PATH",
+                   help="read a recorded video (e.g. data/input/test.mp4) instead of the "
+                        "webcam; runs in the console and stops at the end of the video")
     return p.parse_args()
 
 
@@ -50,7 +53,7 @@ def setup_logging(settings: dict, to_file: bool) -> None:
 def main() -> None:
     args = parse_args()
     settings = load_settings()
-    headless = not (args.debug or args.calibrate)
+    headless = not (args.debug or args.calibrate or args.video)
     setup_logging(settings, to_file=headless)
     if args.calibrate:
         from src.workflows import calibrate_flow
@@ -59,8 +62,9 @@ def main() -> None:
         raise SystemExit(0 if ok else 1)
     from src.workflows import monitor_loop
 
-    if args.debug:
-        monitor_loop.run(settings, debug=True, root=ROOT)
+    video = args.video.resolve() if args.video else None
+    if args.debug or video:
+        monitor_loop.run(settings, debug=args.debug, root=ROOT, video=video)
     else:
         monitor_loop.run_headless(settings, root=ROOT)
 
