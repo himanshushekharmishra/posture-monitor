@@ -25,11 +25,9 @@
 }
 .auth-intro .brand { font-size: var(--t-display); line-height: 0.95; letter-spacing: -0.03em; }
 .auth-pitch { font-size: var(--t-2); max-width: 26ch; }
-.auth-privacy { color: var(--ink-soft); max-width: 40ch; }
 @media (max-width: 48rem) {
   .auth-intro .brand { font-size: var(--t-3); }
   .auth-pitch { font-size: var(--t-1); max-width: none; }
-  .auth-privacy { display: none; }
 }
 
 .auth-card {
