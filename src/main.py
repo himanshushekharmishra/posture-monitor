@@ -1,5 +1,10 @@
 """Entry point: python -m src.main [--debug] [--calibrate]"""
 import argparse
+import json
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+SETTINGS_PATH = ROOT / "config" / "settings.json"
 
 
 def parse_args() -> argparse.Namespace:
@@ -9,11 +14,19 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
+def load_settings(path: Path = SETTINGS_PATH) -> dict:
+    with path.open(encoding="utf-8") as f:
+        return json.load(f)
+
+
 def main() -> None:
     args = parse_args()
-    # Phase 1: run capture + pose with a debug overlay.
-    # Later phases: calibrate_flow / monitor_loop.
-    raise NotImplementedError("Phase 1: wire up workflows.monitor_loop")
+    settings = load_settings()
+    if args.calibrate:
+        raise SystemExit("--calibrate arrives in Phase 2.")
+    from src.workflows import monitor_loop
+
+    monitor_loop.run(settings, debug=args.debug, root=ROOT)
 
 
 if __name__ == "__main__":

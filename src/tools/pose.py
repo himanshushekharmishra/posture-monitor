@@ -2,8 +2,77 @@
 
 Use mediapipe.tasks.python.vision.PoseLandmarker. Never mp.solutions.
 """
+from __future__ import annotations
+
+from pathlib import Path
+from types import TracebackType
+
+import cv2
+import mediapipe as mp
+import numpy as np
+from mediapipe.tasks.python import BaseOptions, vision
+
+from src.schemas.models import Point
+
+POSE_CONNECTIONS: list[tuple[int, int]] = [
+    (c.start, c.end) for c in vision.PoseLandmarksConnections.POSE_LANDMARKS
+]
 
 
 class PoseEstimator:
     def __init__(self, model_path: str) -> None:
-        raise NotImplementedError
+        path = Path(model_path)
+        if not path.is_file():
+            raise FileNotFoundError(
+                f"Pose model not found at {path}. Run scripts\\setup.ps1 or download "
+                "pose_landmarker_lite.task into models\\."
+            )
+        options = vision.PoseLandmarkerOptions(
+            base_options=BaseOptions(model_asset_path=str(path)),
+            running_mode=vision.RunningMode.VIDEO,
+            num_poses=1,
+        )
+        self._landmarker = vision.PoseLandmarker.create_from_options(options)
+        self._last_ts = -1
+
+    def detect(self, frame_bgr: np.ndarray, timestamp_ms: int) -> list[Point] | None:
+        """Return 33 normalized landmarks for the first person, or None if nobody."""
+        # VIDEO mode requires strictly increasing timestamps.
+        ts = max(int(timestamp_ms), self._last_ts + 1)
+        self._last_ts = ts
+        rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+        image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+        result = self._landmarker.detect_for_video(image, ts)
+        if not result.pose_landmarks:
+            return None
+        return [
+            Point(lm.x, lm.y, lm.visibility if lm.visibility is not None else 0.0)
+            for lm in result.pose_landmarks[0]
+        ]
+
+    def close(self) -> None:
+        self._landmarker.close()
+
+    def __enter__(self) -> PoseEstimator:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        self.close()
+
+
+def draw_skeleton(frame_bgr: np.ndarray, landmarks: list[Point], min_visibility: float) -> None:
+    """Draw landmarks and connections in place on a BGR frame (display only)."""
+    h, w = frame_bgr.shape[:2]
+    pts = [(int(p.x * w), int(p.y * h)) for p in landmarks]
+    visible = [p.visibility >= min_visibility for p in landmarks]
+    for a, b in POSE_CONNECTIONS:
+        if visible[a] and visible[b]:
+            cv2.line(frame_bgr, pts[a], pts[b], (0, 200, 0), 2, cv2.LINE_AA)
+    for (x, y), ok in zip(pts, visible):
+        if ok:
+            cv2.circle(frame_bgr, (x, y), 3, (0, 0, 255), -1, cv2.LINE_AA)
