@@ -16,7 +16,9 @@
    **I slouched and got no alert** for misses. These feed the precision number.
 
 Keep the server on `127.0.0.1`: browsers only allow the camera on localhost or
-HTTPS, and the server has no login. The page loads the MediaPipe runtime from
+HTTPS, and the server has no login. Other websites can't talk to it: the socket
+only accepts the page's own origin, and requests must be addressed to a host in
+`web_allowed_hosts` (`python -m backend --host <ip>` adds that address). The page loads the MediaPipe runtime from
 cdn.jsdelivr.net and its font from Google Fonts; the model comes from your server.
 
 ## Tray icon

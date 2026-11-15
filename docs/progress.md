@@ -47,6 +47,15 @@ Each phase is one commit, so the history shows how the app was built up.
 | Benchmark rerun at 5/10/15 FPS (nobody in frame) | `a3d867c` |
 | This progress log; docs-update rule in `CLAUDE.md` | this commit |
 
+## Fixes from the code review (2026-11-15)
+
+Each problem below was reproduced first, then fixed with a test that covers it.
+
+| Problem | Fix | Commit |
+|---|---|---|
+| Any website you visit could open a WebSocket to the local server (WebSockets ignore CORS) and, for example, overwrite your calibration | `/ws` only accepts browser connections whose Origin is the server itself | see git log |
+| DNS rebinding: a site resolving its own name to 127.0.0.1 could read `/api/*` | requests must be addressed to an allowed host (`web_allowed_hosts`) | see git log |
+
 ## What has been checked
 
 - **Automated**: every commit above passes `pytest -q` on its own. The suite covers

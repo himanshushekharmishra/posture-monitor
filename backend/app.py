@@ -14,10 +14,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
+
+from backend.security import is_allowed_host, is_same_origin
 
 from backend.protocol import (
     CalibrateMessage, CancelCalibrationMessage, FrameMessage, LabelMessage,
@@ -65,6 +67,14 @@ def create_app(
     app = FastAPI(title="Posture Monitor", version="1.0",
                   description="Posture scoring over landmarks sent by the browser.")
     app.state.shared = shared
+    allowed_hosts = list(settings["web_allowed_hosts"])
+
+    @app.middleware("http")
+    async def check_host(request: Request, call_next: Callable) -> Response:
+        """Refuse requests addressed to another hostname (DNS rebinding)."""
+        if not is_allowed_host(request.headers.get("host"), allowed_hosts):
+            return PlainTextResponse("Host not allowed", status_code=400)
+        return await call_next(request)
 
     def with_logger(fn: Callable[[SessionLogger], object]) -> object:
         lg = SessionLogger(db_path)
@@ -110,6 +120,12 @@ def create_app(
 
     @app.websocket("/ws")
     async def posture_socket(ws: WebSocket) -> None:
+        host = ws.headers.get("host")
+        origin = ws.headers.get("origin")
+        if not is_allowed_host(host, allowed_hosts) or not is_same_origin(origin, host):
+            log.warning("Refused WebSocket from origin %r to host %r", origin, host)
+            await ws.close(code=1008)  # policy violation
+            return
         await ws.accept()
         logger = SessionLogger(db_path)
         logger.start_session()

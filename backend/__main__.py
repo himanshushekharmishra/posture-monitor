@@ -21,6 +21,9 @@ def main() -> None:
     args = p.parse_args()
     logging.basicConfig(stream=sys.stdout, level=logging.INFO, format=LOG_FORMAT)
     log_overrides(applied)
+    # Serving on a specific address (e.g. a LAN IP) means requests will be addressed to it.
+    if args.host not in ("0.0.0.0", "::") and args.host not in settings["web_allowed_hosts"]:
+        settings["web_allowed_hosts"] = [*settings["web_allowed_hosts"], args.host]
     logging.getLogger("posture.web").info("Open http://%s:%d", args.host, args.port)
     uvicorn.run(create_app(settings, ROOT), host=args.host, port=args.port, log_level="info")
 

@@ -96,7 +96,9 @@ def web(tmp_path):
     (tmp_path / "frontend").mkdir()
     (tmp_path / "frontend" / "index.html").write_text("<h1>hi</h1>")
     clock = FakeClock()
-    app = create_app(dict(SETTINGS), tmp_path, clock=clock)
+    settings = dict(SETTINGS)
+    settings["web_allowed_hosts"] = [*SETTINGS["web_allowed_hosts"], "testserver"]  # TestClient's host
+    app = create_app(settings, tmp_path, clock=clock)
     with TestClient(app) as client:
         yield client, clock, tmp_path
 
@@ -159,3 +161,38 @@ def test_websocket_calibrate_alert_label(web):
     session = stats["recent_sessions"][0]
     assert session["alerts"] == 1 and session["avg_latency_ms"] == pytest.approx(12.0)
     assert session["ended_at"] is not None
+
+
+# ---------- security.py ----------
+
+def test_security_helpers():
+    from backend.security import host_name, is_allowed_host, is_same_origin
+
+    assert host_name("127.0.0.1:8000") == "127.0.0.1"
+    assert host_name("[::1]:8000") == "::1" and host_name("localhost") == "localhost"
+    allowed = ["127.0.0.1", "localhost", "::1"]
+    assert is_allowed_host("LOCALHOST:8000", allowed) and is_allowed_host("[::1]:8000", allowed)
+    assert not is_allowed_host("evil.example:8000", allowed) and not is_allowed_host(None, allowed)
+    assert is_same_origin(None, "127.0.0.1:8000")  # non-browser client
+    assert is_same_origin("http://127.0.0.1:8000", "127.0.0.1:8000")
+    assert not is_same_origin("https://evil.example", "127.0.0.1:8000")
+    assert not is_same_origin("http://127.0.0.1:9999", "127.0.0.1:8000")  # other local app
+    assert not is_same_origin("null", "127.0.0.1:8000")  # sandboxed iframe / file://
+
+
+def test_websocket_from_another_site_is_refused(web):
+    from starlette.websockets import WebSocketDisconnect
+
+    client, _, root = web
+    with pytest.raises(WebSocketDisconnect) as exc:
+        with client.websocket_connect("/ws", headers={"origin": "https://evil.example"}) as ws:
+            ws.receive_json()
+    assert exc.value.code == 1008
+    with client.websocket_connect("/ws", headers={"origin": "http://testserver"}) as ws:
+        assert ws.receive_json()["type"] == "hello"
+
+
+def test_foreign_host_header_is_refused(web):
+    client, _, _ = web
+    assert client.get("/api/stats", headers={"host": "evil.example:8000"}).status_code == 400
+    assert client.get("/api/stats").status_code == 200
