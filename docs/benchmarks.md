@@ -1,13 +1,13 @@
 # Benchmarks
 
-Measured 2026-11-15 08:41 with `python scripts\benchmark.py`.
+Measured 2026-11-15 08:44 with `python scripts\benchmark.py`.
 
 ## Summary (default `process_fps` = 5)
 
 | Metric | Value |
 |---|---|
-| Avg CPU % (whole machine) | 0.6% (meets the <10% target) |
-| Avg latency per frame (ms) | 12.8 (p95 12.7) |
+| Avg CPU % (whole machine) | 0.5% (meets the <10% target) |
+| Avg latency per frame (ms) | 12.1 (p95 12.3) |
 | Processed FPS | 5.03 |
 | Alert precision (30-min labelled session) | not measured yet |
 
@@ -15,11 +15,11 @@ Measured 2026-11-15 08:41 with `python scripts\benchmark.py`.
 
 | Target FPS | Actual FPS | CPU % machine | CPU % one core | Frame ms mean / p95 / max | Pose ms mean / p95 | Camera read ms mean | Person in frame | Memory |
 |---|---|---|---|---|---|---|---|---|
-| 5 | 5.03 | 0.6% | 10% | 12.8 / 12.7 / 112.8 | 11.9 / 12.5 | 0.8 | 0% | 155 MB |
-| 10 | 10.03 | 1.2% | 19% | 12.2 / 12.7 / 34.8 | 12.0 / 12.6 | 0.2 | 0% | 161 MB |
-| 15 | 15.01 | 1.6% | 25% | 34.7 / 47.5 / 52.3 | 12.8 / 14.8 | 21.9 | 0% | 161 MB |
+| 5 | 5.03 | 0.5% | 7% | 12.1 / 12.3 / 96.0 | 11.4 / 12.0 | 0.7 | 0% | 155 MB |
+| 10 | 10.00 | 0.9% | 14% | 65.1 / 89.3 / 102.4 | 11.6 / 12.3 | 53.6 | 1% | 181 MB |
+| 15 | 9.98 | 0.9% | 14% | 100.2 / 112.4 / 120.7 | 11.4 / 12.0 | 88.7 | 0% | 184 MB |
 
-Model load time: 120 ms. Each pass ran for 30 s after a warm-up.
+Model load time: 106 ms. Each pass ran for 30 s after a warm-up.
 
 ## How it was measured
 
@@ -33,7 +33,8 @@ Model load time: 120 ms. Each pass ran for 30 s after a warm-up.
 ## Findings
 
 - Nobody was in frame for most of the run, so these numbers are a lower bound. Re-run while sitting at the desk for realistic figures.
-- At the default 5 FPS one frame takes 13 ms of the 200 ms budget, so the pipeline could keep up with about 78 FPS if the camera allowed it.
+- At 15 FPS the camera only delivered 10.0 FPS: each read waited 89 ms for a new frame, while the model took 11 ms. The camera, not the model, is the limit here (often auto-exposure in dim light).
+- At the default 5 FPS one frame takes 12 ms of the 200 ms budget, so the pipeline could keep up with about 83 FPS if the camera allowed it.
 
 ## Machine
 
