@@ -1,4 +1,4 @@
-// Dashboard shell: the side menu and switching between tabs (#monitor, #meter, ...).
+// Dashboard shell: the dropdown menu and switching between tabs (#monitor, #meter, ...).
 // The Monitor tab (main.js) keeps running while other tabs are open.
 import { toast } from "./dom.js";
 import { meterView } from "./views/meter.js";
@@ -16,7 +16,8 @@ const VIEWS = {
 const NAMES = { google: "Google", github: "GitHub", phone: "Phone" };
 const body = document.body;
 const menuBtn = document.getElementById("menu-btn");
-const narrow = window.matchMedia("(max-width: 52rem)");
+const menuWrap = document.getElementById("nav-wrap");
+const links = [...document.querySelectorAll(".nav-menu a")];
 
 // ---------- tabs ----------
 function show(name, focus = false) {
@@ -24,68 +25,72 @@ function show(name, focus = false) {
   for (const v of Object.keys(VIEWS)) {
     document.getElementById(`view-${v}`).hidden = v !== name;
   }
-  document.querySelectorAll(".sidenav a").forEach((a) => {
+  for (const a of links) {
     if (a.dataset.view === name) a.setAttribute("aria-current", "page");
     else a.removeAttribute("aria-current");
-  });
-  const label = document.querySelector(`.sidenav a[data-view="${name}"]`).textContent;
+  }
+  const label = links.find((a) => a.dataset.view === name).textContent;
+  document.getElementById("menu-label").textContent = label;
   document.title = name === "monitor" ? "Posture Monitor" : `${label} · Posture Monitor`;
   VIEWS[name]?.show();
   if (focus) document.getElementById("views").focus();
 }
 
 window.addEventListener("hashchange", () => {
+  setMenu(false);
   show(location.hash.slice(1), true);
-  if (narrow.matches) setMenu(false);
 });
 
-// ---------- menu ----------
-function readPref() {
-  try {
-    return localStorage.getItem("pm-nav") === "collapsed";
-  } catch {
-    return false;
-  }
-}
-
-function writePref(collapsed) {
-  try {
-    localStorage.setItem("pm-nav", collapsed ? "collapsed" : "open");
-  } catch {
-    /* private mode: the menu just won't remember */
-  }
-}
+// ---------- dropdown menu ----------
+const isOpen = () => menuBtn.getAttribute("aria-expanded") === "true";
 
 function setMenu(open) {
-  if (narrow.matches) {
-    body.classList.toggle("nav-open", open);
-  } else {
-    body.classList.toggle("nav-collapsed", !open);
-    writePref(!open);
+  body.classList.toggle("nav-open", open);
+  menuBtn.setAttribute("aria-expanded", String(open));
+}
+
+function focusLink(index) {
+  links[(index + links.length) % links.length].focus();
+}
+
+menuBtn.addEventListener("click", () => setMenu(!isOpen()));
+
+menuBtn.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault();
+    setMenu(true);
+    focusLink(e.key === "ArrowDown" ? 0 : -1);
   }
-  menuBtn.setAttribute("aria-expanded", String(open));
-}
-
-function syncMenu() {
-  body.classList.remove("nav-open");
-  const open = narrow.matches ? false : !readPref();
-  body.classList.toggle("nav-collapsed", !narrow.matches && !open);
-  menuBtn.setAttribute("aria-expanded", String(open));
-}
-
-menuBtn.addEventListener("click", () => {
-  setMenu(menuBtn.getAttribute("aria-expanded") !== "true");
 });
+
+// Clicking the page you're already on doesn't fire hashchange, so close here too.
+for (const a of links) a.addEventListener("click", () => setMenu(false));
+
+document.getElementById("nav-menu").addEventListener("keydown", (e) => {
+  const i = links.indexOf(document.activeElement);
+  if (e.key === "ArrowDown") { e.preventDefault(); focusLink(i + 1); }
+  else if (e.key === "ArrowUp") { e.preventDefault(); focusLink(i - 1); }
+  else if (e.key === "Home") { e.preventDefault(); focusLink(0); }
+  else if (e.key === "End") { e.preventDefault(); focusLink(-1); }
+});
+
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && narrow.matches && body.classList.contains("nav-open")) {
+  if (e.key === "Escape" && isOpen()) {
     setMenu(false);
     menuBtn.focus();
   }
 });
-narrow.addEventListener("change", syncMenu);
+
+// Close when clicking or tabbing anywhere outside the menu.
+document.addEventListener("pointerdown", (e) => {
+  if (isOpen() && !menuWrap.contains(e.target)) setMenu(false);
+});
+menuWrap.addEventListener("focusout", (e) => {
+  if (isOpen() && e.relatedTarget && !menuWrap.contains(e.relatedTarget)) setMenu(false);
+});
 
 // ---------- start ----------
-syncMenu();
+setMenu(false);
 const params = new URLSearchParams(location.search);
 const linked = params.get("linked");
 if (linked) {

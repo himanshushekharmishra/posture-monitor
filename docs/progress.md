@@ -3,7 +3,7 @@
 Where the project stands, what has been checked, and what is left. Update this file
 with every change (see the rule in `CLAUDE.md`).
 
-Last updated: 2026-11-15, on `main`, after the code review fixes.
+Last updated: 2026-11-15, on `main`, after the new look for the web pages.
 
 ## Status at a glance
 
@@ -46,7 +46,7 @@ Each phase is one commit, so the history shows how the app was built up.
 | Web frontend: in-browser pose estimation, live posture view | `7ca0508` |
 | Web app docs | `2a84522` |
 | Benchmark rerun at 5/10/15 FPS (nobody in frame) | `a3d867c` |
-| This progress log; docs-update rule in `CLAUDE.md` | this commit |
+| This progress log; docs-update rule in `CLAUDE.md` | `8ec1746` |
 
 ## Fixes from the code review (2026-11-15)
 
@@ -68,8 +68,8 @@ Each problem below was reproduced first, then fixed with a test that covers it.
 | Nonsense settings (e.g. `PROCESS_FPS=0`, `EMA_ALPHA=5`) failed later, far from the cause | all settings are checked at start-up and every problem is listed; in background mode it's shown as a notification | `c3d150a` |
 | The docs said desktop and web share one calibration, but each process read `baseline.json` only at start, so calibrating in one didn't reach the other while running | both watch the file (one check every 2 s) and reload it when it changes | `be3ed91` |
 | The tray's "alerts today" count kept yesterday's number after midnight until the next alert | it's recounted when the date changes | `be3ed91` |
-| Pressing `s` twice within a second overwrote the first saved example | names get a `_2`, `_3`… suffix instead | this commit |
-| The settings-key test didn't scan `backend/` or every script | it scans `src/`, `backend/` and `scripts/` | this commit |
+| Pressing `s` twice within a second overwrote the first saved example | names get a `_2`, `_3`… suffix instead | `f0f5b65` |
+| The settings-key test didn't scan `backend/` or every script | it scans `src/`, `backend/` and `scripts/` | `f0f5b65` |
 
 Also re-checked after these fixes: the real web page still connects (its own
 origin is accepted), a request with a foreign Host header gets 400, and a running
@@ -84,9 +84,10 @@ previous sessions, a slouch meter and settings.
 | Step | State | Commit |
 |---|---|---|
 | Backend: accounts, sessions, phone codes, Google/GitHub OAuth, per-account data | done | `5648b07` |
-| Login and sign-up page; app page shows the account, log out, guest trial days | done | this commit |
+| Login and sign-up page; app page shows the account, log out, guest trial days | done | `8dd324d` |
 | Dashboard backend: session history, slouch insights, profile edit, password change, delete account | done | `c24d042` |
-| Dashboard pages: side menu, profile, previous sessions, slouch meter, settings | done | this commit |
+| Dashboard pages: side menu, profile, previous sessions, slouch meter, settings | done | `b2bf86f` |
+| New look: sky blue and white colours, floating buttons, a real dropdown menu, login errors under the field | done | this commit |
 
 Security built in: scrypt password hashes; session cookies that are HttpOnly,
 SameSite=Lax and Secure on https, stored only as hashes; lockout after 8 wrong
@@ -113,6 +114,19 @@ the page because the score meter had the id `meter`; overlapping last labels on 
 hour chart; wrapping times in the session timeline; profile spacing and link colour.
 The login page's privacy line was removed on request (`a76c67d`).
 
+New look (2026-11-15): pale sky blue and white with a deep navy for text and a clear
+blue for controls (calm and focused), plus a warm amber ring for keyboard focus.
+Buttons float on a soft blue shadow, lift when you point at them and press down when
+clicked (no movement if the system asks for reduced motion). The **Menu** button
+now drops a list down under itself on every screen size, shows the page you're on,
+and closes when you pick a page, click outside, press Escape or tab away; arrow keys
+move through it. On the login page, mistakes show in small red text right under the
+field they're about (a wrong username or password under the password box, with both
+boxes outlined), and clear as you type. Checked in a browser: empty and wrong login,
+mismatched guest passwords, guest sign-up into the dashboard, the dropdown on desktop
+and at phone width in dark mode, no sideways scrolling. The throwaway test account
+was deleted afterwards.
+
 Needs you: Google and GitHub sign-in work once you register the app and put the
 IDs in `.env` (steps in `config/env.example`); real SMS needs a Twilio account.
 Until then phone codes are printed in the server window, and only for people on
@@ -122,8 +136,8 @@ the same computer.
 
 | Problem | Fix | Commit |
 |---|---|---|
-| "Start camera" said "Close other apps using it" for every failure, including when no camera exists | separate messages for blocked permission, no camera found (check the laptop's camera key or privacy switch) and camera in use | this commit |
-| Browsers could keep running old scripts from their cache after an update | `.js`, `.css` and `.html` are revalidated on every load (unchanged files return a cheap 304) | this commit |
+| "Start camera" said "Close other apps using it" for every failure, including when no camera exists | separate messages for blocked permission, no camera found (check the laptop's camera key or privacy switch) and camera in use | `01058f6` |
+| Browsers could keep running old scripts from their cache after an update | `.js`, `.css` and `.html` are revalidated on every load (unchanged files return a cheap 304) | `01058f6` |
 
 Camera status on this laptop: Windows lists the "Integrated Camera" with status
 Unknown (not connected) and neither Chrome nor Python can open it, although it

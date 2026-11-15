@@ -18,7 +18,7 @@
 
 /* The intro echoes the app: one vertical "plumb line" beside the words. */
 .auth-intro {
-  border-left: 6px solid var(--good);
+  border-left: 6px solid var(--accent);
   padding-left: clamp(1rem, 3vw, 2rem);
   display: grid;
   gap: 1rem;
@@ -33,7 +33,8 @@
 .auth-card {
   background: var(--sheet);
   border: 1px solid var(--rule);
-  border-radius: 16px;
+  border-radius: 18px;
+  box-shadow: 0 2px 6px rgb(var(--shadow) / 0.06), 0 24px 60px rgb(var(--shadow) / 0.14);
   padding: clamp(1.25rem, 3vw, 2rem);
   display: grid;
   gap: 1.1rem;
@@ -45,7 +46,10 @@
   gap: 0.5rem;
 }
 .auth-switch button { padding-block: 0.7rem; font-size: var(--t-1); }
-.auth-switch button[aria-selected="true"] { background: var(--teal); color: var(--sheet); }
+.auth-switch button[aria-selected="true"] {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 82%, #fff), var(--accent));
+  border-color: var(--accent); color: var(--on-accent);
+}
 
 .auth-view { display: grid; gap: 0.9rem; }
 .auth-view form { display: grid; gap: 0.35rem; }
@@ -61,7 +65,7 @@
   padding: 0.6rem 0.75rem;
   width: 100%;
 }
-.auth-view input:focus-visible { outline: 3px solid var(--slouch); outline-offset: 1px; border-color: var(--teal); }
+.auth-view input:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; border-color: var(--accent); }
 .auth-view input[aria-invalid="true"] { border-color: var(--alert); }
 
 .password-field { position: relative; }
@@ -70,6 +74,33 @@
   position: absolute; right: 0.35rem; top: 50%; transform: translateY(-50%);
   padding: 0.25rem 0.7rem; font-size: var(--t-0); border-width: 0;
 }
+/* The Show button sits inside the field, so it doesn't float or lift. */
+.show-password,
+.show-password:hover:not(:disabled),
+.show-password:active:not(:disabled) {
+  transform: translateY(-50%); box-shadow: none; background: transparent;
+}
+.show-password:hover:not(:disabled) { color: var(--accent-strong); text-decoration: underline; }
+
+/* Errors sit right under the field they're about, small and red. */
+.field-error {
+  color: var(--alert);
+  font-size: var(--t-0);
+  font-weight: 600;
+  line-height: 1.35;
+  display: flex;
+  gap: 0.4em;
+  align-items: baseline;
+}
+.field-error::before {
+  content: "!";
+  flex: none;
+  display: inline-grid; place-items: center;
+  width: 1.15em; height: 1.15em; border-radius: 50%;
+  background: var(--alert); color: var(--sheet);
+  font-size: 0.85em; font-weight: 800;
+}
+.form-error { margin-top: 0.5rem; }
 
 .field-rule, .step-note { color: var(--ink-soft); font-size: var(--t-0); }
 .step-title { font-weight: 800; font-size: var(--t-2); }
@@ -86,14 +117,28 @@ button.wide { width: 100%; margin-top: 0.8rem; padding-block: 0.7rem; }
 .provider {
   display: flex; align-items: center; justify-content: center; gap: 0.6rem;
   width: 100%; padding-block: 0.65rem;
-  color: var(--ink); border-color: var(--rule); background: var(--paper);
+  color: var(--ink); background: var(--sheet);
   text-decoration: none; font-weight: 600; border: 2px solid var(--rule); border-radius: 999px;
+  box-shadow: var(--lift);
+  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease,
+    border-color 160ms ease;
 }
-.provider:hover:not([aria-disabled="true"]) { border-color: var(--teal); }
-.provider[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+@media (hover: hover) {
+  .provider:hover:not([aria-disabled="true"]) {
+    border-color: var(--accent); background: var(--accent-soft);
+    transform: translateY(-2px); box-shadow: var(--lift-hover);
+  }
+}
+.provider:active:not([aria-disabled="true"]) { transform: translateY(1px); box-shadow: var(--lift-press); }
+.provider[aria-disabled="true"],
+.provider[aria-disabled="true"]:hover,
+.provider[aria-disabled="true"]:active {
+  opacity: 0.5; cursor: not-allowed; box-shadow: none; transform: none;
+  background: var(--sheet); border-color: var(--rule);
+}
 .provider svg { width: 1.2rem; height: 1.2rem; flex: none; }
 .provider small { font-weight: 400; color: var(--ink-soft); }
-a.provider:focus-visible, button.provider:focus-visible { outline: 3px solid var(--slouch); outline-offset: 3px; }
+a.provider:focus-visible, button.provider:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 
 .auth-message {
   border-left: 5px solid var(--alert);

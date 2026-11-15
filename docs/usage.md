@@ -22,7 +22,8 @@
    **I slouched and got no alert** for misses. These feed the precision number.
 
 ### The dashboard
-After logging in, the **Menu** button opens the side menu (on a phone it drops down):
+After logging in, the **Menu** button (it shows the page you're on) drops down a list of
+pages; pick one, or press Escape or click outside to close it:
 - **Monitor**: the live camera view. It keeps running while you look at other tabs;
   the dot in the top bar shows your current posture from anywhere.
 - **Slouch meter**: today's slouches per hour against your 7/14/30-day average, a

@@ -1,19 +1,27 @@
 /* Posture Monitor — web UI.
    One bold element: the plumb-line score meter. Colour carries the posture state;
-   everything else stays quiet so the page reads at a glance from your chair. */
+   everything else stays quiet so the page reads at a glance from your chair.
+   Palette: clear sky blue on white (calm focus) with a warm amber spark for focus
+   rings (energy, "you're here"). */
 
 :root {
-  --paper: #e6ecee;      /* page */
-  --sheet: #f6f8f9;      /* raised surfaces */
-  --ink: #1c2a33;        /* text */
-  --ink-soft: #52626c;   /* secondary text */
-  --rule: #c5d0d5;       /* dividers */
-  --teal: #1f5f6b;       /* controls */
-  --good: #3f7d5c;
+  --paper: #eef5fd;      /* page: pale sky */
+  --paper-top: #fbfdff;  /* page gradient starts near white */
+  --sheet: #ffffff;      /* raised surfaces */
+  --ink: #102a43;        /* text: deep navy */
+  --ink-soft: #486581;   /* secondary text */
+  --rule: #d4e4f5;       /* dividers */
+  --accent: #1f6fd1;     /* controls: focused blue */
+  --accent-strong: #1559ad;
+  --accent-soft: #e3effd; /* hover / selected tint */
+  --on-accent: #ffffff;
+  --focus: #f0a020;      /* keyboard focus ring */
+  --shadow: 31 92 170;   /* rgb of the blue-tinted shadows */
+  --good: #2f8a5f;
   --slouch: #b7791f;
-  --alert: #a63d32;
-  --away: #7f8d95;
-  --stage: #13232b;      /* camera area, dark in both themes */
+  --alert: #c0392b;
+  --away: #7b8ea3;
+  --stage: #0f2036;      /* camera area, dark in both themes */
   --state: var(--away);
 
   --font: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, sans-serif;
@@ -24,22 +32,31 @@
   --t-3: 1.66rem;
   --t-display: clamp(2.8rem, 6vw, 4.6rem);
   --gap: 1.5rem;
+  --lift: 0 1px 2px rgb(var(--shadow) / 0.10), 0 4px 12px rgb(var(--shadow) / 0.12);
+  --lift-hover: 0 2px 4px rgb(var(--shadow) / 0.12), 0 10px 24px rgb(var(--shadow) / 0.22);
+  --lift-press: 0 1px 2px rgb(var(--shadow) / 0.16);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #142026;
-    --sheet: #1b2a31;
-    --ink: #e3ebee;
-    --ink-soft: #9fb0b8;
-    --rule: #30434c;
-    --teal: #6fb3bf;
-    --good: #6fb48c;
+    --paper: #0d1828;
+    --paper-top: #11203a;
+    --sheet: #15243b;
+    --ink: #e5eef9;
+    --ink-soft: #9db2cc;
+    --rule: #284262;
+    --accent: #6ea8ff;
+    --accent-strong: #9cc4ff;
+    --accent-soft: #1c3456;
+    --on-accent: #0b1626;
+    --focus: #f2b544;
+    --shadow: 0 0 0;
+    --good: #6fc296;
     --slouch: #e0a648;
-    --alert: #e07566;
-    --away: #8b9aa2;
-    --stage: #0d181d;
+    --alert: #f07c6c;
+    --away: #8b9db2;
+    --stage: #08111d;
     color-scheme: dark;
   }
 }
@@ -51,7 +68,8 @@ html { font-size: 106.25%; } /* 17px */
 
 body {
   margin: 0;
-  background: var(--paper);
+  min-height: 100vh;
+  background: linear-gradient(180deg, var(--paper-top) 0, var(--paper) 22rem) var(--paper);
   color: var(--ink);
   font-family: var(--font);
   font-size: var(--t-1);
@@ -60,30 +78,64 @@ body {
 
 h1, h2, p { margin: 0; }
 
+/* Buttons float a little above the page and lift further when you point at them. */
 button {
   font: inherit;
   font-weight: 600;
-  color: var(--teal);
-  background: transparent;
-  border: 2px solid var(--teal);
+  color: var(--accent);
+  background: var(--sheet);
+  border: 2px solid color-mix(in srgb, var(--accent) 35%, var(--rule));
   border-radius: 999px;
   padding: 0.5rem 1.1rem;
   cursor: pointer;
+  box-shadow: var(--lift);
+  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease,
+    border-color 160ms ease, color 160ms ease;
 }
-button.primary { background: var(--teal); color: var(--sheet); }
-button.quiet { border-color: transparent; padding-inline: 0; text-decoration: underline; text-underline-offset: 3px; }
-button:disabled { opacity: 0.45; cursor: not-allowed; }
-button:focus-visible { outline: 3px solid var(--slouch); outline-offset: 3px; }
+button.primary {
+  color: var(--on-accent);
+  border-color: var(--accent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 82%, #fff), var(--accent));
+}
+@media (hover: hover) {
+  button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: var(--lift-hover);
+    border-color: var(--accent);
+    background-color: var(--accent-soft);
+  }
+  button.primary:hover:not(:disabled) {
+    background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+    border-color: var(--accent-strong);
+  }
+}
+button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: var(--lift-press);
+  transition-duration: 60ms;
+}
+button.quiet,
+button.quiet:hover:not(:disabled),
+button.quiet:active:not(:disabled) {
+  border-color: transparent; background: transparent; box-shadow: none; transform: none;
+  padding-inline: 0; text-decoration: underline; text-underline-offset: 3px;
+}
+button.quiet:hover:not(:disabled) { color: var(--accent-strong); }
+button:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+button:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 
 /* ---------- top bar ---------- */
 .topbar {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   gap: 1rem;
   flex-wrap: wrap;
   padding: 1.1rem clamp(1rem, 4vw, 2.5rem);
   border-bottom: 1px solid var(--rule);
+  background: color-mix(in srgb, var(--sheet) 88%, transparent);
+  position: relative;
+  z-index: 20;
 }
 .brand { font-size: var(--t-2); font-weight: 800; letter-spacing: -0.01em; }
 .topbar-right { display: flex; align-items: baseline; gap: 1.5rem; flex-wrap: wrap; }
@@ -136,14 +188,14 @@ button:focus-visible { outline: 3px solid var(--slouch); outline-offset: 3px; }
   position: absolute; inset: 0;
   display: grid; place-content: center; gap: 0.5rem;
   padding: 2rem; max-width: 34rem; margin: auto;
-  color: #d9e3e7; text-align: center;
+  color: #dbe7f5; text-align: center;
 }
 .stage-title { font-size: var(--t-3); font-weight: 800; color: #fff; }
 .stage[data-camera="on"] .stage-message { display: none; }
 .calibration-banner {
   position: absolute; left: 1rem; right: 1rem; bottom: 1rem;
   padding: 0.7rem 1rem; border-radius: 10px;
-  background: rgb(20 32 38 / 0.82); color: #fff; font-weight: 600;
+  background: rgb(15 32 54 / 0.85); color: #fff; font-weight: 600;
 }
 .controls { display: flex; flex-wrap: wrap; gap: 0.6rem; }
 .hint { color: var(--ink-soft); font-size: var(--t-0); max-width: 60ch; }
@@ -237,4 +289,5 @@ button:focus-visible { outline: 3px solid var(--slouch); outline-offset: 3px; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
+  button:hover, button:active { transform: none !important; }
 }

@@ -15,11 +15,24 @@
   <a class="skip-link" href="#views">Skip to content</a>
   <header class="topbar">
     <div class="topbar-left">
-      <button type="button" class="menu-btn" id="menu-btn" aria-expanded="true"
-              aria-controls="sidenav">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-        <span>Menu</span>
-      </button>
+      <div class="nav-wrap" id="nav-wrap">
+        <button type="button" class="menu-btn" id="menu-btn" aria-expanded="false"
+                aria-controls="nav-menu">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+          <span class="visually-hidden">Menu, current page:</span>
+          <span id="menu-label">Monitor</span>
+          <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <nav class="nav-menu" id="nav-menu" aria-label="Sections">
+          <ul>
+            <li><a href="#monitor" data-view="monitor">Monitor</a></li>
+            <li><a href="#meter" data-view="meter">Slouch meter</a></li>
+            <li><a href="#sessions" data-view="sessions">Previous sessions</a></li>
+            <li><a href="#profile" data-view="profile">Profile</a></li>
+            <li><a href="#settings" data-view="settings">Settings</a></li>
+          </ul>
+        </nav>
+      </div>
       <h1 class="brand">Posture Monitor</h1>
     </div>
     <div class="topbar-right">
@@ -34,16 +47,6 @@
   <p class="toast" id="toast" role="status" hidden></p>
 
   <div class="shell" id="shell">
-    <nav class="sidenav" id="sidenav" aria-label="Sections">
-      <ul>
-        <li><a href="#monitor" data-view="monitor">Monitor</a></li>
-        <li><a href="#meter" data-view="meter">Slouch meter</a></li>
-        <li><a href="#sessions" data-view="sessions">Previous sessions</a></li>
-        <li><a href="#profile" data-view="profile">Profile</a></li>
-        <li><a href="#settings" data-view="settings">Settings</a></li>
-      </ul>
-    </nav>
-
     <div class="views" id="views" tabindex="-1">
       <!-- Monitor: the live camera view -->
       <section class="view" id="view-monitor" aria-labelledby="h-monitor">

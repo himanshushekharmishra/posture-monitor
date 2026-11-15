@@ -10,10 +10,13 @@
 /* ---------- header ---------- */
 .topbar-left { display: flex; align-items: center; gap: 1rem; }
 .menu-btn {
-  display: inline-flex; align-items: center; gap: 0.45rem;
-  padding: 0.4rem 0.9rem; font-size: var(--t-0);
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.45rem 0.8rem 0.45rem 0.9rem; font-size: var(--t-0); white-space: nowrap;
 }
-.menu-btn svg { width: 1.1rem; height: 1.1rem; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; fill: none; }
+.menu-btn svg { width: 1.1rem; height: 1.1rem; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+.menu-btn .chev { width: 1rem; height: 1rem; transition: transform 180ms ease; }
+.menu-btn[aria-expanded="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.menu-btn[aria-expanded="true"] .chev { transform: rotate(180deg); }
 .live-pill {
   font-size: var(--t-0); font-weight: 600; color: var(--ink); text-decoration: none;
   display: inline-flex; align-items: center; gap: 0.45em;
@@ -29,50 +32,60 @@
   font-weight: 600; max-width: calc(100% - 2rem);
 }
 
-/* ---------- shell + side menu ---------- */
-.shell {
-  display: grid;
-  grid-template-columns: 14rem minmax(0, 1fr);
-  min-height: calc(100vh - 4rem);
+/* ---------- dropdown menu ---------- */
+/* The list unfolds downward from the Menu button. Closed, it is invisible and out of
+   the tab order (visibility: hidden), so keyboard users never land in it by accident. */
+.nav-wrap { position: relative; }
+.nav-menu {
+  position: absolute; top: calc(100% + 0.5rem); left: 0; z-index: 25;
+  min-width: 15rem; max-width: calc(100vw - 2rem);
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  box-shadow: 0 4px 10px rgb(var(--shadow) / 0.08), 0 22px 48px rgb(var(--shadow) / 0.20);
+  padding: 0.4rem;
+  transform-origin: top left;
+  opacity: 0;
+  transform: translateY(-8px) scaleY(0.92);
+  visibility: hidden;
+  transition: opacity 160ms ease, transform 180ms ease, visibility 0s linear 180ms;
 }
-.app.nav-collapsed .shell { grid-template-columns: minmax(0, 1fr); }
-.app.nav-collapsed .sidenav { display: none; }
-
-.sidenav { border-right: 1px solid var(--rule); padding: 1.25rem 0; }
-.sidenav ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.15rem; }
-.sidenav a {
-  display: block; padding: 0.6rem 1.25rem 0.6rem 1.1rem;
+.app.nav-open .nav-menu {
+  opacity: 1; transform: none; visibility: visible;
+  transition: opacity 160ms ease, transform 180ms ease, visibility 0s;
+}
+.nav-menu ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.15rem; }
+.nav-menu a {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.6rem 0.9rem; border-radius: 10px;
   color: var(--ink-soft); text-decoration: none; font-weight: 600;
-  border-left: 5px solid transparent;
+  transition: background-color 120ms ease, color 120ms ease;
 }
-.sidenav a:hover { color: var(--ink); background: var(--sheet); }
-.sidenav a[aria-current="page"] { color: var(--ink); border-left-color: var(--good); background: var(--sheet); }
-.sidenav a:focus-visible { outline: 3px solid var(--slouch); outline-offset: -3px; }
+.nav-menu a::before {
+  content: ""; width: 0.45rem; height: 0.45rem; border-radius: 50%; flex: none;
+  background: transparent;
+}
+.nav-menu a:hover { color: var(--ink); background: var(--accent-soft); }
+.nav-menu a[aria-current="page"] { color: var(--accent); background: var(--accent-soft); }
+.nav-menu a[aria-current="page"]::before { background: var(--accent); }
+.nav-menu a:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
 
+.shell { min-height: calc(100vh - 4rem); }
 .views { min-width: 0; }
 .views:focus { outline: none; }
 
-/* Narrow screens: the menu drops down from the button instead of sitting at the side. */
 @media (max-width: 52rem) {
-  .shell, .app.nav-collapsed .shell { grid-template-columns: minmax(0, 1fr); }
-  .sidenav {
-    display: none; position: absolute; left: 0; right: 0; z-index: 15;
-    background: var(--paper); border-right: 0; border-bottom: 1px solid var(--rule);
-    box-shadow: 0 12px 24px rgb(0 0 0 / 0.12); padding: 0.5rem 0;
-  }
-  .app.nav-open .sidenav { display: block; }
-  .shell { position: relative; }
   .topbar .link-status { display: none; }
 }
 
 /* ---------- pages ---------- */
-.page { padding: 1.5rem clamp(1rem, 4vw, 2.5rem) 3rem; max-width: 64rem; display: grid; gap: 1.75rem; }
+.page { padding: 1.5rem clamp(1rem, 4vw, 2.5rem) 3rem; max-width: 64rem; margin-inline: auto; display: grid; gap: 1.75rem; }
 .page-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
 .page-head h2 { font-size: var(--t-3); font-weight: 800; }
 
 .range { display: flex; gap: 0.4rem; }
 .range button { padding: 0.35rem 0.9rem; font-size: var(--t-0); }
-.range button[aria-pressed="true"] { background: var(--teal); color: var(--sheet); }
+.range button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 
 /* The meter's one bold element: today's slouches per hour. */
 .meter-hero { display: grid; gap: 0.3rem; }
@@ -95,9 +108,9 @@
 .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
 .chart .grid line { stroke: var(--rule); stroke-width: 1; }
 .chart .axis text { fill: var(--ink-soft); font-size: 12px; font-family: var(--font); }
-.chart .bar { fill: var(--teal); }
+.chart .bar { fill: var(--accent); }
 .chart .hit { fill: transparent; cursor: default; }
-.chart .hit:hover + .bar, .chart .bar.active { fill: color-mix(in srgb, var(--teal) 70%, var(--ink)); }
+.chart .hit:hover + .bar, .chart .bar.active { fill: color-mix(in srgb, var(--accent) 70%, var(--ink)); }
 .chart .empty-day { fill: var(--ink-soft); font-size: 11px; font-family: var(--font); }
 .chart-tip {
   position: absolute; pointer-events: none; z-index: 5;
@@ -118,7 +131,10 @@
   display: grid; grid-template-columns: minmax(9rem, 1.4fr) repeat(4, minmax(4.5rem, 1fr)) 1.5rem;
   gap: 0.75rem; align-items: center; text-align: left; padding: 0.85rem 0.25rem; font-weight: 400;
 }
-.session-row > button:hover { background: var(--sheet); }
+.session-row > button,
+.session-row > button:hover:not(:disabled),
+.session-row > button:active:not(:disabled) { box-shadow: none; transform: none; border: 0; }
+.session-row > button:hover:not(:disabled) { background: var(--accent-soft); }
 .session-row .when { font-weight: 600; }
 .session-row .muted { color: var(--ink-soft); font-size: var(--t-0); display: block; font-weight: 400; }
 .session-row .chev { transition: transform 150ms ease; justify-self: end; }
@@ -141,7 +157,7 @@
   .session-row .hide-narrow, .session-head .hide-narrow { display: none; }
 }
 
-.page a:not(.connect) { color: var(--teal); font-weight: 600; text-underline-offset: 3px; }
+.page a:not(.connect) { color: var(--accent); font-weight: 600; text-underline-offset: 3px; }
 
 /* ---------- profile ---------- */
 #profile-body { display: grid; gap: 1.5rem; }
@@ -149,7 +165,7 @@
 .profile-card { display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; }
 .avatar {
   width: 5rem; height: 5rem; border-radius: 50%; display: grid; place-items: center;
-  background: var(--teal); color: var(--sheet); font-size: var(--t-3); font-weight: 800;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 70%, #fff), var(--accent)); color: var(--on-accent); font-size: var(--t-3); font-weight: 800;
 }
 .profile-name { font-size: var(--t-3); font-weight: 800; }
 .profile-sub { color: var(--ink-soft); }
@@ -168,7 +184,7 @@
   font: inherit; color: var(--ink); background: var(--paper);
   border: 2px solid var(--rule); border-radius: 10px; padding: 0.55rem 0.75rem; width: 100%;
 }
-.settings-block input:focus-visible { outline: 3px solid var(--slouch); outline-offset: 1px; border-color: var(--teal); }
+.settings-block input:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; border-color: var(--accent); }
 .settings-block input[aria-invalid="true"] { border-color: var(--alert); }
 .settings-block > button, .inline-phone > button { justify-self: start; margin-top: 0.8rem; }
 .field-rule { color: var(--ink-soft); font-size: var(--t-0); }
@@ -183,7 +199,7 @@
 .connections .name { font-weight: 600; }
 .connections .state { color: var(--ink-soft); font-size: var(--t-0); }
 .connections .linked { color: var(--good); font-weight: 600; }
-.connections a.connect { color: var(--teal); font-weight: 600; }
+.connections a.connect { color: var(--accent); font-weight: 600; }
 .inline-phone { display: grid; gap: 0.35rem; margin-top: 0.5rem; }
 .inline-phone input {
   font: inherit; color: var(--ink); background: var(--paper);
@@ -191,4 +207,4 @@
 }
 .danger h3 { color: var(--alert); }
 .danger-btn { border-color: var(--alert); color: var(--alert); }
-.danger-btn:hover { background: var(--alert); color: var(--sheet); }
+.danger-btn:hover:not(:disabled) { background: var(--alert); border-color: var(--alert); color: var(--sheet); }

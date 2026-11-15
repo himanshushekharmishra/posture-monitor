@@ -161,7 +161,7 @@ inline scripts, no framing, nosniff).
 | `frontend/js/view.js`, `skeleton.js` | everything that draws or writes to the page |
 | `frontend/login.html`, `auth.css`, `js/login.js` | log in, sign up, phone codes, finishing a verified sign-up, trial ended |
 | `frontend/js/api.js` | JSON helper for `/api/*` that surfaces the server's error message |
-| `frontend/js/dashboard.js` | side menu (collapses on desktop, drops down on phones) and tab switching by `#hash` |
+| `frontend/js/dashboard.js` | dropdown menu (click, Escape, click outside, arrow keys) and tab switching by `#hash` |
 | `frontend/js/views/*.js` | the Slouch meter, Previous sessions, Profile and Settings tabs |
 | `frontend/js/charts.js`, `dom.js` | dependency-free SVG bar chart with tooltips and table view; text-only DOM helpers |
 | `backend/insights.py` | pure: session summaries (slouch time from slouch_start to recovered/away/end) and slouch-meter numbers |

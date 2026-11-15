@@ -14,6 +14,9 @@ const ICONS = {
 const state = { providers: null, phoneIntent: "login", phone: "", returnView: "login" };
 
 // ---------- messages ----------
+// Messages that aren't about a form (an expired sign-up, a Google error) show at the top
+// of the card. Anything about a form shows right under the field it's about, or just
+// above the form's button, so nobody has to scroll up to see what went wrong.
 function showMessage(text, tone = "error") {
   const el = $("message");
   el.textContent = text;
@@ -21,13 +24,99 @@ function showMessage(text, tone = "error") {
   el.hidden = !text;
 }
 
-async function run(button, action) {
+/** A problem with one field; run() shows it under that field. */
+class FieldError extends Error {
+  constructor(input, message) {
+    super(message);
+    this.input = input;
+  }
+}
+
+function describedBy(input, id, add) {
+  const ids = new Set((input.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean));
+  if (add) ids.add(id);
+  else ids.delete(id);
+  if (ids.size) input.setAttribute("aria-describedby", [...ids].join(" "));
+  else input.removeAttribute("aria-describedby");
+}
+
+function newErrorLine(className) {
+  const p = document.createElement("p");
+  p.className = className;
+  p.setAttribute("role", "alert");
+  return p;
+}
+
+function showFieldError(input, text) {
+  const host = input.closest(".password-field") || input;
+  let p = $(`${input.id}-error`);
+  if (!p) {
+    p = newErrorLine("field-error");
+    p.id = `${input.id}-error`;
+    host.after(p);
+  }
+  p.textContent = text;
+  input.setAttribute("aria-invalid", "true");
+  describedBy(input, p.id, true);
+}
+
+function showFormError(form, text) {
+  let p = form.querySelector(".form-error");
+  if (!p) {
+    p = newErrorLine("field-error form-error");
+    form.querySelector("[type=submit]").before(p);
+  }
+  p.textContent = text;
+}
+
+function clearFieldError(input) {
+  input.removeAttribute("aria-invalid");
+  const p = $(`${input.id}-error`);
+  if (p) {
+    describedBy(input, p.id, false);
+    p.remove();
+  }
+}
+
+function clearErrors(form) {
+  form.querySelectorAll("input").forEach(clearFieldError);
+  form.querySelector(".form-error")?.remove();
+}
+
+const clearAllErrors = () => document.querySelectorAll("form").forEach(clearErrors);
+
+/** Server errors on a sign-up form go under the field they name, else above the button. */
+const placeNear = (form) => (err) => {
+  const m = err.message;
+  const input = /password/i.test(m) ? form.password : /username/i.test(m) ? form.username : null;
+  if (input) showFieldError(input, m);
+  else showFormError(form, m);
+};
+
+// Typing in a field clears its error (and the form's general one, now out of date).
+document.addEventListener("input", (e) => {
+  const input = e.target;
+  if (!(input instanceof HTMLInputElement) || !input.form) return;
+  if (input.form.id === "login-form") clearErrors(input.form); // one shared error there
+  else clearFieldError(input);
+  input.form.querySelector(".form-error")?.remove();
+});
+
+/** Run a form action. `place` decides where a server error shows (default: top). */
+async function run(button, action, place = null) {
   showMessage("");
   button.disabled = true;
   try {
     await action();
   } catch (err) {
-    showMessage(err.message);
+    if (err instanceof FieldError) {
+      showFieldError(err.input, err.message);
+      err.input.focus();
+    } else if (place) {
+      place(err);
+    } else {
+      showMessage(err.message);
+    }
   } finally {
     button.disabled = false;
   }
@@ -46,10 +135,16 @@ function showView(name) {
   if (!onTabs) first?.focus();
 }
 
-$("tab-login").addEventListener("click", () => { showMessage(""); showView("login"); });
-$("tab-signup").addEventListener("click", () => { showMessage(""); showView("signup"); });
+function switchTo(name) {
+  showMessage("");
+  clearAllErrors();
+  showView(name);
+}
+
+$("tab-login").addEventListener("click", () => switchTo("login"));
+$("tab-signup").addEventListener("click", () => switchTo("signup"));
 document.querySelectorAll("[data-back]").forEach((b) =>
-  b.addEventListener("click", () => { showMessage(""); showView(state.returnView); }));
+  b.addEventListener("click", () => switchTo(state.returnView)));
 
 // ---------- provider buttons ----------
 function providerButton(kind, label, intent, enabled) {
@@ -99,17 +194,11 @@ function renderProviders() {
 
 // ---------- form helpers ----------
 function invalid(input, message) {
-  input.setAttribute("aria-invalid", "true");
-  input.focus();
-  throw new Error(message);
-}
-
-function clearInvalid(form) {
-  form.querySelectorAll("[aria-invalid]").forEach((i) => i.removeAttribute("aria-invalid"));
+  throw new FieldError(input, message);
 }
 
 function checkNewAccount(form) {
-  clearInvalid(form);
+  clearErrors(form);
   const username = form.username.value.trim();
   if (!USERNAME_RE.test(username)) {
     invalid(form.username, "Username must be 3-32 letters, numbers, dots, dashes or underscores.");
@@ -140,13 +229,18 @@ $("login-form").addEventListener("submit", (e) => {
   e.preventDefault();
   const form = e.currentTarget;
   run(form.querySelector("[type=submit]"), async () => {
-    clearInvalid(form);
+    clearErrors(form);
     if (!form.username.value.trim()) invalid(form.username, "Enter your username.");
     if (!form.password.value) invalid(form.password, "Enter your password.");
     await api("/api/auth/login", {
       username: form.username.value.trim(), password: form.password.value,
     });
     goToApp();
+  }, (err) => {
+    // "Wrong username or password": either could be at fault, so mark both and say it
+    // under the password, right above the button.
+    if (err.status === 401) form.username.setAttribute("aria-invalid", "true");
+    showFieldError(form.password, err.message);
   });
 });
 
@@ -158,7 +252,7 @@ $("guest-form").addEventListener("submit", (e) => {
     const { username, password } = checkNewAccount(form);
     await api("/api/auth/signup", { username, password, guest: true });
     goToApp();
-  });
+  }, placeNear(form));
 });
 
 // ---------- phone ----------
@@ -168,10 +262,13 @@ function openPhone(intent) {
   $("phone-form").hidden = false;
   $("code-form").hidden = true;
   showMessage("");
+  clearAllErrors();
   showView("phone");
 }
 
 async function sendCode(button) {
+  const resending = $("phone-form").hidden;
+  clearErrors(resending ? $("code-form") : $("phone-form"));
   await run(button, async () => {
     const res = await api("/api/auth/phone/send", { phone: state.phone });
     $("sent-to").textContent = res.sent_to;
@@ -180,17 +277,20 @@ async function sendCode(button) {
     $("code-form").hidden = false;
     $("code").value = "";
     $("code").focus();
+  }, (err) => {
+    if (resending) showFormError($("code-form"), err.message);
+    else showFieldError($("phone"), err.message);
   });
 }
 
 $("phone-form").addEventListener("submit", (e) => {
   e.preventDefault();
   const form = e.currentTarget;
-  clearInvalid(form);
+  clearErrors(form);
   state.phone = form.phone.value.trim();
   if (!/^\+\d[\d\s().-]{6,}$/.test(state.phone)) {
-    form.phone.setAttribute("aria-invalid", "true");
-    showMessage("Enter the number with its country code, like +91 98765 43210.");
+    showFieldError(form.phone, "Enter the number with its country code, like +91 98765 43210.");
+    form.phone.focus();
     return;
   }
   sendCode(form.querySelector("[type=submit]"));
@@ -202,14 +302,14 @@ $("code-form").addEventListener("submit", (e) => {
   e.preventDefault();
   const form = e.currentTarget;
   run(form.querySelector("[type=submit]"), async () => {
-    clearInvalid(form);
+    clearErrors(form);
     if (!/^\d{6}$/.test(form.code.value)) invalid(form.code, "Enter the 6-digit code.");
     const res = await api("/api/auth/phone/verify", {
       phone: state.phone, code: form.code.value, intent: state.phoneIntent,
     });
     if (res.status === "needs_account") await openComplete();
     else goToApp();
-  });
+  }, (err) => showFieldError(form.code, err.message));
 });
 
 // ---------- finish sign-up after verifying ----------
@@ -240,7 +340,7 @@ $("complete-form").addEventListener("submit", (e) => {
       username, password, display_name: form.display_name.value.trim() || null,
     });
     goToApp();
-  });
+  }, placeNear(form));
 });
 
 // ---------- trial over ----------
