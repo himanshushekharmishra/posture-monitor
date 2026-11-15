@@ -12,11 +12,44 @@ orange = slouching, red = alerted. Grey with two bars = paused.
 - **Recalibrate**: opens the calibration window, then continues monitoring.
 - **Quit**: stops monitoring and closes the session in the log.
 
+## Debug window
+`python -m src.main --debug` shows the skeleton, the features, the smoothed score
+and the state, and prints per-frame latency in the console.
+
+- `q` or `Esc`: quit
+- `s`: save the current landmarks (coordinates only, no image) to
+  `data/examples/recorded_<time>.json`. See `data/examples/README.md` to label them
+  so the tests use them.
+
+## Recorded videos
+Put a recording of yourself at the desk in `data/input/` (gitignored), for example
+one made with the Windows Camera app, then:
+
+```powershell
+python -m src.main --video data\input\desk.mp4 --debug   # watch it
+python scripts\benchmark.py --video data\input\desk.mp4  # repeatable benchmark
+```
+
+The video plays in real time and the run stops at its end (the benchmark loops it).
+
+## Measuring alert precision
+1. Calibrate, then run `python -m src.main --label` for at least 30 minutes of
+   normal work.
+2. After each alert, press `y` in the window if you really were slouching or `n` if
+   not. Press `m` whenever you notice you've been slouching and got no alert.
+3. Quit with `q`. The console prints the session's precision, and the next
+   `python scripts\benchmark.py` puts the total in docs/benchmarks.md.
+
+## Settings
+Every threshold is in `config/settings.json`. To change one on this machine only,
+copy `config/env.example` to `.env` in the project root and set the key in upper
+case (`PERSIST_SECONDS=45`). Environment variables win over `.env`:
+`$env:CAMERA_INDEX = "1"; python -m src.main --debug`.
+
 ## Data
 Everything stays in `data/output/` (gitignored). No camera frames are saved.
 - `baseline.json`: your calibrated upright posture
-- `posture.db`: SQLite `sessions` (start/end, avg CPU %, avg latency ms) and
-  `events` (`slouch_start`, `alert`, `recovered`, `away` with the score)
-- `app.log`: log file for the headless run
-
-`python -m src.main --debug` runs in the console with the live skeleton window instead.
+- `posture.db`: SQLite `sessions` (start/end, avg CPU %, avg latency ms),
+  `events` (`slouch_start`, `alert`, `recovered`, `away` with the score) and
+  `labels` (from `--label` sessions)
+- `app.log`: log file for the background run

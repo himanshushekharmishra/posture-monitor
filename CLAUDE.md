@@ -13,19 +13,25 @@ Side inputs: calibration baseline (data/output/baseline.json), tray icon (pystra
 ## Folder map
 - src/engine/     features.py, calibration.py, state.py  (pure logic, NO I/O)
 - src/workflows/  monitor_loop.py, calibrate_flow.py     (orchestration)
-- src/tools/      capture, pose, notifier, logger, tray  (all I/O lives here)
-- src/utils/      geometry.py, timing.py
+- src/tools/      capture (webcam + video file), pose, notifier, logger, tray,
+                  examples  (all I/O lives here)
+- src/utils/      geometry.py, timing.py, env.py (.env overrides)
 - src/schemas/    dataclasses + enums (NOT named `types/`, which shadows the stdlib)
-- config/settings.json  every threshold and tunable
+- config/settings.json  every threshold and tunable (overridable via .env / env vars)
 - messages/alerts.json  notification text variants
+- data/examples/  labelled landmark JSON used by tests (coordinates only)
+- data/input/     recorded test videos (gitignored)
 - data/output/    runtime files (gitignored)
-- scripts/        PowerShell setup/run + benchmark.py
+- scripts/        PowerShell setup/run, benchmark.py, make_examples.py
+- docs/           architecture.md, usage.md, benchmarks.md (generated)
 - tests/          pytest
 
 ## Commands
 - Setup:      powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
 - Run:        python -m src.main          (debug window: python -m src.main --debug)
 - Calibrate:  python -m src.main --calibrate
+- Video:      python -m src.main --video data\input\clip.mp4 [--debug]
+- Label:      python -m src.main --label  (y/n per alert, m = missed; for precision)
 - Tests:      pytest -q
 - Benchmark:  python scripts\benchmark.py
 
