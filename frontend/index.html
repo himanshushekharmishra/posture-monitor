@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Posture Monitor</title>
+  <meta name="description" content="Checks your sitting posture with your webcam. The video stays in your browser.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1 class="brand">Posture Monitor</h1>
+    <p class="link-status" id="link-status" data-state="connecting">Connecting to the server</p>
+  </header>
+
+  <main class="layout">
+    <section class="camera" aria-label="Camera">
+      <div class="stage" id="stage" data-camera="off">
+        <video id="video" playsinline muted></video>
+        <canvas id="overlay" aria-hidden="true"></canvas>
+        <div class="stage-message" id="stage-message">
+          <p class="stage-title">Your camera is off</p>
+          <p>Start it to check your posture. The video stays in this browser; only 33
+            body points per frame go to the local server.</p>
+        </div>
+        <p class="calibration-banner" id="calibration-banner" hidden></p>
+      </div>
+      <div class="controls">
+        <button type="button" class="primary" id="camera-btn" disabled>Start camera</button>
+        <button type="button" id="calibrate-btn" disabled>Calibrate</button>
+        <button type="button" id="notify-btn">Turn on notifications</button>
+      </div>
+      <p class="hint" id="hint">Loading the pose model…</p>
+    </section>
+
+    <section class="readout" aria-label="Posture" data-state="away" id="readout">
+      <div class="state-block">
+        <p class="state-word" id="state-word" aria-live="polite">Away</p>
+        <p class="state-detail" id="state-detail">No one in view</p>
+      </div>
+
+      <div class="plumb" role="meter" aria-label="Slouch score" aria-valuemin="0"
+           aria-valuemax="1" aria-valuenow="0" id="meter">
+        <div class="plumb-track">
+          <div class="plumb-fill" id="meter-fill"></div>
+          <div class="plumb-threshold" id="meter-threshold">
+            <span>alert line</span>
+          </div>
+        </div>
+        <p class="plumb-value" id="meter-value">–</p>
+      </div>
+
+      <dl class="features" id="features">
+        <p class="features-note" id="features-note">Compared with your calibrated posture</p>
+        <div><dt>Head height above shoulders</dt><dd id="f-neck">–</dd></div>
+        <div><dt>Closeness to screen</dt><dd id="f-lean">–</dd></div>
+        <div><dt>Shoulder tilt</dt><dd id="f-shoulder">–</dd></div>
+        <div><dt>Head tilt</dt><dd id="f-head">–</dd></div>
+      </dl>
+
+      <div class="alert-box" id="alert-box" hidden>
+        <p class="alert-text" id="alert-text"></p>
+        <p class="alert-question">Were you really slouching?</p>
+        <div class="alert-actions">
+          <button type="button" class="primary" data-label="correct">Yes, I was</button>
+          <button type="button" data-label="false_alarm">No, false alarm</button>
+        </div>
+      </div>
+      <button type="button" class="quiet" id="missed-btn" disabled>I slouched and got no alert</button>
+    </section>
+
+    <section class="today" aria-label="Today">
+      <h2>Today</h2>
+      <div class="today-figures">
+        <p><strong id="alerts-today">0</strong> alerts</p>
+        <p><strong id="precision">–</strong> of labelled alerts were right</p>
+        <p><strong id="missed">0</strong> missed slouches reported</p>
+      </div>
+      <h2>Recent sessions</h2>
+      <table class="sessions">
+        <thead><tr><th scope="col">Started</th><th scope="col">Length</th>
+          <th scope="col">Slouches</th><th scope="col">Alerts</th><th scope="col">Pose time</th></tr></thead>
+        <tbody id="sessions-body"><tr><td colspan="5">No sessions yet.</td></tr></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
