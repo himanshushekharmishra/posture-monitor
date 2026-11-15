@@ -48,3 +48,9 @@ def test_load_rejects_wrong_length(tmp_path):
     bad.write_text(json.dumps({"expected": None, "landmarks": [{"x": 0, "y": 0}] * 5}))
     with pytest.raises(ValueError, match="33"):
         load_example(bad)
+
+
+def test_quick_saves_do_not_overwrite(tmp_path):
+    pts = load_example(EXAMPLES / "upright.json")["points"]
+    paths = {save_example(tmp_path, pts) for _ in range(3)}
+    assert len(paths) == 3 and all(p.is_file() for p in paths)

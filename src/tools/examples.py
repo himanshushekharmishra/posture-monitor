@@ -60,8 +60,13 @@ def save_example(
     name: str | None = None,
 ) -> Path:
     folder.mkdir(parents=True, exist_ok=True)
-    name = name or f"recorded_{datetime.now():%Y%m%d_%H%M%S}.json"
-    path = folder / name
+    if name:
+        path = folder / name
+    else:  # never overwrite: two presses within a second get different names
+        stem = f"recorded_{datetime.now():%Y%m%d_%H%M%S}"
+        path, n = folder / f"{stem}.json", 2
+        while path.exists():
+            path, n = folder / f"{stem}_{n}.json", n + 1
     data = {
         "description": description,
         "source": "recorded",

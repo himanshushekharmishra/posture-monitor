@@ -3,7 +3,7 @@
 Where the project stands, what has been checked, and what is left. Update this file
 with every change (see the rule in `CLAUDE.md`).
 
-Last updated: 2026-11-15, on `main` after merging `phase-1-capture-pose`.
+Last updated: 2026-11-15, on `main`, after the code review fixes.
 
 ## Status at a glance
 
@@ -11,7 +11,8 @@ Last updated: 2026-11-15, on `main` after merging `phase-1-capture-pose`.
 |---|---|
 | Desktop app (5 build phases) | done |
 | Web app (`backend/` + `frontend/`) | done; live webcam in the page not yet tried by a person |
-| Tests | 71 passing (`pytest -q`) |
+| Code review | done: 16 problems found and fixed (table below) |
+| Tests | 87 passing (`pytest -q`) |
 | Benchmarks | measured, but only with nobody in frame |
 | Alert precision | not measured yet (needs a 30-minute labelled session) |
 
@@ -65,8 +66,14 @@ Each problem below was reproduced first, then fixed with a test that covers it.
 | Starting `run.ps1` twice ran two monitors fighting over the camera, with two tray icons | a Windows named mutex allows one instance; the second says "Already running" and exits | `37c19d4` |
 | A baseline file with shoulder width 0 crashed scoring (division by zero); odd calibrations (ears below shoulders) were accepted | baselines are checked on load and when built; a bad file is ignored, a bad calibration fails with a reason | `c3d150a` |
 | Nonsense settings (e.g. `PROCESS_FPS=0`, `EMA_ALPHA=5`) failed later, far from the cause | all settings are checked at start-up and every problem is listed; in background mode it's shown as a notification | `c3d150a` |
-| The docs said desktop and web share one calibration, but each process read `baseline.json` only at start, so calibrating in one didn't reach the other while running | both watch the file (one check every 2 s) and reload it when it changes | this commit |
-| The tray's "alerts today" count kept yesterday's number after midnight until the next alert | it's recounted when the date changes | this commit |
+| The docs said desktop and web share one calibration, but each process read `baseline.json` only at start, so calibrating in one didn't reach the other while running | both watch the file (one check every 2 s) and reload it when it changes | `be3ed91` |
+| The tray's "alerts today" count kept yesterday's number after midnight until the next alert | it's recounted when the date changes | `be3ed91` |
+| Pressing `s` twice within a second overwrote the first saved example | names get a `_2`, `_3`… suffix instead | this commit |
+| The settings-key test didn't scan `backend/` or every script | it scans `src/`, `backend/` and `scripts/` | this commit |
+
+Also re-checked after these fixes: the real web page still connects (its own
+origin is accepted), a request with a foreign Host header gets 400, and a running
+desktop monitor reloaded a baseline written by another process mid-run.
 
 ## What has been checked
 
