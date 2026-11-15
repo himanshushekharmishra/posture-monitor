@@ -1,0 +1,13 @@
+# Keep text files as LF in the repo and in the working tree, on every OS.
+# (Windows PowerShell, Python and editors all handle LF.) Stops git's
+# "LF will be replaced by CRLF" warnings with core.autocrlf=true.
+* text=auto eol=lf
+
+# Never touch binary files.
+*.task binary
+*.db binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.mp4 binary
+*.avi binary
