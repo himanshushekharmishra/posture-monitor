@@ -210,3 +210,20 @@ def test_malformed_messages_get_an_error_and_keep_the_socket_open(web):
         assert ws.receive_json()["type"] == "error"
         ws.send_json({"type": "frame", "landmarks": None})  # still works afterwards
         assert ws.receive_json()["type"] == "frame"
+
+
+def test_baseline_written_by_the_desktop_app_is_picked_up(web):
+    from src.engine.calibration import build_baseline
+    from src.engine.features import measure
+    from src.tools.baseline_store import save_baseline
+
+    client, clock, root = web
+    with client.websocket_connect("/ws") as ws:
+        assert ws.receive_json()["calibrated"] is False
+        # The desktop app calibrates while the page is open.
+        save_baseline(build_baseline([measure(UPRIGHT["points"])], "desktop"),
+                      root / SETTINGS["baseline_path"])
+        clock.t += 3  # past the watcher's check interval
+        ws.send_json({"type": "frame", "landmarks": as_wire(UPRIGHT)})
+        msg = ws.receive_json()
+        assert msg["calibrated"] is True and msg["note"] == ""

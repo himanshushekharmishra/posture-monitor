@@ -1,4 +1,5 @@
 import sqlite3
+from pathlib import Path
 from datetime import datetime, timedelta
 
 from src.tools.logger import SessionLogger
@@ -78,3 +79,31 @@ def test_empty_label_summary(tmp_path):
     s = lg.label_summary()
     assert s.labelled_alerts == 0 and s.precision is None and s.minutes == 0
     lg.close()
+
+
+def test_baseline_watcher(tmp_path):
+    from src.engine.calibration import build_baseline
+    from src.engine.features import measure
+    from src.tools.baseline_store import BaselineWatcher, save_baseline
+    from src.tools.examples import load_example
+
+    pts = load_example(Path(__file__).parent.parent / "data/examples/upright.json")["points"]
+    b = build_baseline([measure(pts)], "t")
+    path = tmp_path / "baseline.json"
+    clock = {"t": 0.0}
+    w = BaselineWatcher(path, check_every=2, clock=lambda: clock["t"])
+    assert w.poll() == (False, None)
+    save_baseline(b, path)
+    assert w.poll() == (False, None)  # not time to check yet
+    clock["t"] = 2.5
+    changed, loaded = w.poll()
+    assert changed and loaded == b
+    clock["t"] = 5
+    assert w.poll() == (False, None)  # unchanged
+    save_baseline(b, path)
+    w.mark_current()  # our own write
+    clock["t"] = 8
+    assert w.poll() == (False, None)
+    path.unlink()
+    clock["t"] = 11
+    assert w.poll() == (True, None)  # deleted

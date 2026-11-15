@@ -5,6 +5,7 @@ import logging
 import threading
 import time
 from dataclasses import replace
+from datetime import date
 from pathlib import Path
 from typing import Callable
 
@@ -15,6 +16,7 @@ import psutil
 from src.engine.features import deviation_score, extract_features
 from src.engine.state import Ema, PostureStateMachine
 from src.schemas.models import Baseline, MonitorStatus, Point, PostureState
+from src.tools.baseline_store import BaselineWatcher
 from src.tools.capture import open_source
 from src.tools.examples import save_example
 from src.tools.logger import SessionLogger
@@ -208,6 +210,8 @@ def run(
         alerts_today=logger.alerts_today(), note="" if baseline else uncalibrated_note
     )
     t0 = time.monotonic()
+    watcher = BaselineWatcher(baseline_path)
+    day = date.today()
     log.info("Monitoring started (session %s)", logger.session_id)
 
     def base_note() -> str:
@@ -222,6 +226,7 @@ def run(
                     new = _recalibrate(settings, root, tray)
                     if new is not None:
                         baseline = new
+                        watcher.mark_current()  # our own write, not someone else's
                         machine.reset()
                         ema.reset()
                     control.publish(state=machine.state, note=base_note())
@@ -276,6 +281,20 @@ def run(
                             landmarks = pose.detect(frame, int((now - t0) * 1000))
                         latency_total += timer.ms
                         frames += 1
+
+                        # Picked up a calibration made by the web app or another run?
+                        changed, new_baseline = watcher.poll()
+                        if changed:
+                            log.info("Baseline file changed; %s", "reloaded" if new_baseline
+                                     else "it's missing or unreadable, alerts are off")
+                            baseline = new_baseline
+                            machine.reset()
+                            ema.reset()
+                            control.publish(note=base_note())
+                        today = date.today()
+                        if today != day:  # midnight: "alerts today" starts again
+                            day = today
+                            control.publish(alerts_today=logger.alerts_today())
 
                         raw, lines = _score_frame(landmarks, baseline, settings)
                         smoothed = ema.update(raw) if raw is not None else None

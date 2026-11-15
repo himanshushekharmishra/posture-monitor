@@ -63,8 +63,10 @@ Each problem below was reproduced first, then fixed with a test that covers it.
 | Tray **Recalibrate** while another app had the camera stopped the whole background app | the error is caught, you get a notification, monitoring continues | `37c19d4` |
 | An error while updating the tray icon would stop the monitoring thread | status-listener errors are logged and ignored | `37c19d4` |
 | Starting `run.ps1` twice ran two monitors fighting over the camera, with two tray icons | a Windows named mutex allows one instance; the second says "Already running" and exits | `37c19d4` |
-| A baseline file with shoulder width 0 crashed scoring (division by zero); odd calibrations (ears below shoulders) were accepted | baselines are checked on load and when built; a bad file is ignored, a bad calibration fails with a reason | this commit |
-| Nonsense settings (e.g. `PROCESS_FPS=0`, `EMA_ALPHA=5`) failed later, far from the cause | all settings are checked at start-up and every problem is listed; in background mode it's shown as a notification | this commit |
+| A baseline file with shoulder width 0 crashed scoring (division by zero); odd calibrations (ears below shoulders) were accepted | baselines are checked on load and when built; a bad file is ignored, a bad calibration fails with a reason | `c3d150a` |
+| Nonsense settings (e.g. `PROCESS_FPS=0`, `EMA_ALPHA=5`) failed later, far from the cause | all settings are checked at start-up and every problem is listed; in background mode it's shown as a notification | `c3d150a` |
+| The docs said desktop and web share one calibration, but each process read `baseline.json` only at start, so calibrating in one didn't reach the other while running | both watch the file (one check every 2 s) and reload it when it changes | this commit |
+| The tray's "alerts today" count kept yesterday's number after midnight until the next alert | it's recounted when the date changes | this commit |
 
 ## What has been checked
 

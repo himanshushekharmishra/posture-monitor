@@ -29,7 +29,7 @@ from backend.protocol import (
 from backend.session import PostureSession, parse_landmarks
 from src.engine.calibration import baseline_to_dict
 from src.schemas.models import Baseline
-from src.tools.baseline_store import load_baseline, save_baseline
+from src.tools.baseline_store import BaselineWatcher, load_baseline, save_baseline
 from src.tools.logger import SessionLogger
 from src.tools.notifier import AlertNotifier
 
@@ -62,6 +62,7 @@ def create_app(
     model_path = root / settings["model_path"]
     frontend_dir = root / "frontend"
     shared = Shared(baseline=load_baseline(baseline_path))
+    watcher = BaselineWatcher(baseline_path, clock=clock)  # desktop app may recalibrate
     notifier = AlertNotifier(root / settings["alerts_path"],
                              int(settings["notification_timeout_seconds"]))
 
@@ -173,11 +174,16 @@ def create_app(
                         pose_ms_total += msg.pose_ms
                         pose_frames += 1
                     # A baseline made in another tab or by the desktop app applies here too.
+                    changed, from_disk = watcher.poll()
+                    if changed:
+                        shared.baseline = from_disk
+                        log.info("Baseline file changed on disk; reloaded")
                     if shared.baseline is not session.baseline and not session.calibrating:
                         session.set_baseline(shared.baseline)
                     result = session.handle_frame(landmarks, clock(), _now_iso())
                     if result.new_baseline is not None:
                         save_baseline(result.new_baseline, baseline_path)
+                        watcher.mark_current()
                         shared.baseline = result.new_baseline
                         log.info("Baseline saved from web calibration")
                     event_id = (logger.log_event(result.event, result.score)
