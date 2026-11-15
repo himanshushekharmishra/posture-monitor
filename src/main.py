@@ -5,8 +5,11 @@ No flags: runs headless with a tray icon (scripts\\run.ps1 starts it this way).
 import argparse
 import json
 import logging
+import os
 import sys
 from pathlib import Path
+
+from src.utils.env import apply_overrides, parse_env
 
 ROOT = Path(__file__).resolve().parent.parent
 SETTINGS_PATH = ROOT / "config" / "settings.json"
@@ -20,9 +23,18 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def load_settings(path: Path = SETTINGS_PATH) -> dict:
+def load_settings(path: Path = SETTINGS_PATH, overrides: bool = True) -> dict:
+    """settings.json, then .env in the project root, then environment variables."""
     with path.open(encoding="utf-8") as f:
-        return json.load(f)
+        settings = json.load(f)
+    if not overrides:
+        return settings
+    env_file = ROOT / ".env"
+    file_vars = parse_env(env_file.read_text(encoding="utf-8")) if env_file.is_file() else {}
+    settings, applied = apply_overrides(settings, file_vars, os.environ)
+    if applied:
+        logging.getLogger("posture").info("Settings overridden: %s", ", ".join(applied))
+    return settings
 
 
 def setup_logging(settings: dict, to_file: bool) -> None:
