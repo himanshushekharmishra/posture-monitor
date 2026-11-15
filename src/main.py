@@ -32,17 +32,27 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-def load_settings(path: Path = SETTINGS_PATH, overrides: bool = True) -> dict:
-    """settings.json, then .env in the project root, then environment variables."""
+def read_settings(path: Path = SETTINGS_PATH, overrides: bool = True) -> tuple[dict, list[str]]:
+    """settings.json, then .env in the project root, then environment variables.
+    Returns (settings, names of the overridden settings)."""
     with path.open(encoding="utf-8") as f:
         settings = json.load(f)
     if not overrides:
-        return settings
+        return settings, []
     env_file = ROOT / ".env"
     file_vars = parse_env(env_file.read_text(encoding="utf-8")) if env_file.is_file() else {}
-    settings, applied = apply_overrides(settings, file_vars, os.environ)
+    return apply_overrides(settings, file_vars, os.environ)
+
+
+def log_overrides(applied: list[str]) -> None:
     if applied:
         logging.getLogger("posture").info("Settings overridden: %s", ", ".join(applied))
+
+
+def load_settings(path: Path = SETTINGS_PATH, overrides: bool = True) -> dict:
+    """Settings with overrides applied (for scripts that set up their own logging)."""
+    settings, applied = read_settings(path, overrides)
+    log_overrides(applied)
     return settings
 
 
@@ -58,9 +68,10 @@ def setup_logging(settings: dict, to_file: bool) -> None:
 
 def main() -> None:
     args = parse_args()
-    settings = load_settings()
+    settings, applied = read_settings()
     headless = not (args.debug or args.calibrate or args.video)
     setup_logging(settings, to_file=headless)
+    log_overrides(applied)  # after setup_logging, or the message would be dropped
     if args.calibrate:
         from src.workflows import calibrate_flow
 
