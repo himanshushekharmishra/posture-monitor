@@ -4,6 +4,21 @@
 2. `python -m src.main --calibrate` (sit upright; 3 s countdown, then 5 s recording)
 3. `scripts\run.ps1` to run in the background (tray icon, no console window)
 
+## Web app
+1. `python -m backend` and open http://127.0.0.1:8000 (Chrome, Edge or Firefox).
+2. **Start camera** and allow camera access. The pose model runs in the page; only
+   33 body points per frame are sent to the local server, never the video.
+3. Sit upright and press **Calibrate** (3 s countdown, 5 s recording). The baseline
+   is shared with the desktop app, so calibrating in either one is enough.
+4. **Turn on notifications** to get alerts while the tab is in the background.
+   Monitoring keeps running in a background tab; closing the tab stops it.
+5. After an alert, answer **Yes, I was** or **No, false alarm**; use
+   **I slouched and got no alert** for misses. These feed the precision number.
+
+Keep the server on `127.0.0.1`: browsers only allow the camera on localhost or
+HTTPS, and the server has no login. The page loads the MediaPipe runtime from
+cdn.jsdelivr.net and its font from Google Fonts; the model comes from your server.
+
 ## Tray icon
 The icon colour shows the current state: grey = away, green = good,
 orange = slouching, red = alerted. Grey with two bars = paused.

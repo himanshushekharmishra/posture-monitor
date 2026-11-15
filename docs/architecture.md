@@ -90,6 +90,44 @@ stop, pause and recalibrate flags one way, and a frozen `MonitorStatus` the othe
 way, published only when it changes. Pause releases the camera so its light goes off.
 Recalibrate runs the calibration window on the worker thread and then carries on.
 
+## Web app
+
+```mermaid
+flowchart LR
+    subgraph browser["Browser (frontend/)"]
+        cam["getUserMedia camera"] --> mp["MediaPipe PoseLandmarker<br/>js/pose.js (WASM, GPU)"]
+        mp --> ui["Skeleton, state, meter<br/>js/view.js"]
+    end
+    subgraph server["Local server (backend/)"]
+        ws["/ws<br/>app.py"] --> sess["PostureSession<br/>session.py"]
+        sess --> engine["src/engine<br/>features, EMA, state machine"]
+        sess --> files[("baseline.json<br/>posture.db")]
+    end
+    mp -->|"33 landmarks per frame (JSON)"| ws
+    ws -->|"state, score, alerts, calibration"| ui
+```
+
+The browser does the expensive part (pose estimation) and sends only landmarks, so
+video never leaves the page and the server stays tiny: it doesn't import OpenCV or
+MediaPipe. The server runs exactly the same `src/engine` code as the desktop app,
+so a score means the same thing in both, and they share `baseline.json` and
+`posture.db`.
+
+| File | Role |
+|---|---|
+| `backend/protocol.py` | the WebSocket message formats (pydantic-validated), documented in one place |
+| `backend/session.py` | pure per-connection logic: calibration, features, score, EMA, state machine; time is passed in |
+| `backend/app.py` | FastAPI: `/api/health`, `/api/config`, `/api/baseline`, `/api/stats`, the model file, `/ws`, static frontend |
+| `backend/__main__.py` | `python -m backend` runs uvicorn on `web_host`/`web_port` |
+| `frontend/js/pose.js` | loads the model (served by the backend) and runs it in VIDEO mode |
+| `frontend/js/connection.js` | WebSocket client with reconnect and backoff |
+| `frontend/js/main.js` | camera, frame loop, calibration, alerts, labelling |
+| `frontend/js/view.js`, `skeleton.js` | everything that draws or writes to the page |
+
+The frame loop is paced by a timer inside a Web Worker, because browsers throttle
+ordinary timers in background tabs (Chrome down to once a minute), which would
+stop monitoring as soon as you switch tabs.
+
 ## Layers
 
 | Folder | Role | Rule |

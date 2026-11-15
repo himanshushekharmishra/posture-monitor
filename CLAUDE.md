@@ -24,6 +24,10 @@ Side inputs: calibration baseline (data/output/baseline.json), tray icon (pystra
 - data/output/    runtime files (gitignored)
 - scripts/        PowerShell setup/run, benchmark.py, make_examples.py
 - docs/           architecture.md, usage.md, benchmarks.md (generated)
+- backend/        FastAPI web server: protocol.py (WS messages), session.py (pure,
+                  reuses src/engine), app.py (routes + I/O). No OpenCV/MediaPipe.
+- frontend/       plain HTML/CSS/JS, no build step; MediaPipe runs in the browser
+                  and only landmarks are sent to the backend
 - tests/          pytest
 
 ## Commands
@@ -32,6 +36,7 @@ Side inputs: calibration baseline (data/output/baseline.json), tray icon (pystra
 - Calibrate:  python -m src.main --calibrate
 - Video:      python -m src.main --video data\input\clip.mp4 [--debug]
 - Label:      python -m src.main --label  (y/n per alert, m = missed; for precision)
+- Web app:    python -m backend           (http://127.0.0.1:8000)
 - Tests:      pytest -q
 - Benchmark:  python scripts\benchmark.py
 

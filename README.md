@@ -1,9 +1,18 @@
 # Posture Monitor
 
-Privacy-first, real-time posture monitor for Windows. It uses your webcam and
-on-device pose estimation (MediaPipe) to spot slouching and sends a desktop
-notification if it lasts. It runs in the background with a tray icon. No frames are
-saved or uploaded; only posture numbers and events are kept, on your machine.
+Privacy-first, real-time posture monitor. It uses your webcam and on-device pose
+estimation (MediaPipe) to spot slouching and notifies you if it lasts. Use it as a
+Windows background app with a tray icon, or in the browser. No frames are saved or
+uploaded; only posture numbers and events are kept, on your machine.
+
+## Web app
+```powershell
+python -m backend        # then open http://127.0.0.1:8000
+```
+The browser runs the pose model itself and sends only 33 body points per frame to
+the local server (`backend/`), which scores your posture with the same engine as
+the desktop app. The page (`frontend/`) shows your state, a score meter, alerts and
+today's numbers. Calibrate, alerts and labelling all work from the page.
 
 ## Quick start (Windows)
 ```powershell
@@ -23,6 +32,7 @@ See [docs/architecture.md](docs/architecture.md).
 ## Commands
 | Command | What it does |
 |---|---|
+| `python -m backend` | web app at http://127.0.0.1:8000 (`--port` to change) |
 | `python -m src.main` | background mode with a tray icon (Pause, Recalibrate, Quit) |
 | `python -m src.main --debug` | console + live window; press `s` to save landmarks as an example |
 | `python -m src.main --calibrate` | record a new upright baseline |
