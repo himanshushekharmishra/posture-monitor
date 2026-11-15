@@ -12,9 +12,12 @@
   "weights": { "neck": 0.5, "lean": 0.3, "shoulder_tilt": 0.1, "head_tilt": 0.1 },
   "tilt_norm_degrees": 15,
   "slouch_threshold": 0.25,
+  "recovery_margin": 0.05,
   "persist_seconds": 30,
   "cooldown_minutes": 7,
   "away_timeout_seconds": 10,
+  "alerts_path": "messages/alerts.json",
+  "notification_timeout_seconds": 10,
   "db_path": "data/output/posture.db",
   "baseline_path": "data/output/baseline.json"
 }

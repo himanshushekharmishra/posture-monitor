@@ -8,42 +8,46 @@ import cv2
 import numpy as np
 
 from src.engine.features import deviation_score, extract_features
-from src.schemas.models import Baseline, Point
+from src.engine.state import Ema, PostureStateMachine
+from src.schemas.models import Baseline, Point, PostureState
 from src.tools.capture import Camera
+from src.tools.notifier import AlertNotifier
 from src.tools.pose import PoseEstimator, draw_skeleton
 from src.utils.timing import FrameThrottle, LatencyTimer
 from src.workflows.calibrate_flow import load_baseline
 
 WINDOW = "Posture Monitor (debug) - press q or Esc to quit"
 QUIT_KEYS = {ord("q"), 27}
+STATE_COLORS = {  # BGR
+    PostureState.AWAY: (160, 160, 160),
+    PostureState.GOOD: (0, 200, 0),
+    PostureState.SLOUCHING: (0, 200, 255),
+    PostureState.ALERTED: (0, 0, 255),
+}
 
 
-def _describe(
+def _score_frame(
     landmarks: list[Point] | None, baseline: Baseline | None, settings: dict
-) -> list[str]:
-    """Human-readable feature lines for the console and the debug overlay."""
+) -> tuple[float | None, list[str]]:
+    """Raw deviation score (None if no usable person) and human-readable lines."""
     if not landmarks:
-        return ["no person"]
+        return None, ["no person"]
     f = extract_features(landmarks, baseline)
     if f.visibility < float(settings["min_visibility"]):
-        return [f"low visibility ({f.visibility:.2f})"]
+        return None, [f"low visibility ({f.visibility:.2f})"]
     lines = [
         f"neck {f.neck_ratio:.3f}  lean {f.lean_ratio:.2f}",
         f"tilt sh {f.shoulder_tilt:+.1f}  head {f.head_tilt:+.1f}",
     ]
-    if baseline:
-        score = deviation_score(f, baseline, settings)
-        flag = "SLOUCH" if score >= float(settings["slouch_threshold"]) else "ok"
-        lines.append(f"score {score:.2f} {flag}")
-    else:
-        lines.append("score n/a (run --calibrate)")
-    return lines
+    if baseline is None:
+        return None, [*lines, "score n/a (run --calibrate)"]
+    return deviation_score(f, baseline, settings), lines
 
 
-def _overlay(frame: np.ndarray, lines: list[str]) -> None:
+def _overlay(frame: np.ndarray, lines: list[str], color: tuple[int, int, int]) -> None:
     for i, text in enumerate(lines):
         cv2.putText(frame, text, (10, 25 + 25 * i), cv2.FONT_HERSHEY_SIMPLEX, 0.6,
-                    (255, 255, 255), 2, cv2.LINE_AA)
+                    color if i == 0 else (255, 255, 255), 2, cv2.LINE_AA)
 
 
 def run(settings: dict, debug: bool = False, root: Path | None = None) -> None:
@@ -52,8 +56,13 @@ def run(settings: dict, debug: bool = False, root: Path | None = None) -> None:
     min_vis = float(settings["min_visibility"])
     baseline = load_baseline(root / settings["baseline_path"])
     if baseline is None:
-        print("No baseline yet; run `python -m src.main --calibrate` to get a score.")
+        print("No baseline yet; run `python -m src.main --calibrate`. Alerts are off.")
     throttle = FrameThrottle(float(settings["process_fps"]))
+    ema = Ema(float(settings["ema_alpha"]))
+    machine = PostureStateMachine.from_settings(settings)
+    notifier = AlertNotifier(
+        root / settings["alerts_path"], int(settings["notification_timeout_seconds"])
+    )
     t0 = time.monotonic()
 
     with Camera(
@@ -68,16 +77,31 @@ def run(settings: dict, debug: bool = False, root: Path | None = None) -> None:
                 if frame is None:
                     print("camera returned no frame; retrying")
                     continue
-                ts_ms = int((time.monotonic() - t0) * 1000)
+                now = time.monotonic()
                 with LatencyTimer() as timer:
-                    landmarks = pose.detect(frame, ts_ms)
-                lines = _describe(landmarks, baseline, settings)
-                print(f"latency {timer.ms:6.1f} ms  " + " | ".join(lines), flush=True)
+                    landmarks = pose.detect(frame, int((now - t0) * 1000))
+
+                raw, lines = _score_frame(landmarks, baseline, settings)
+                smoothed = ema.update(raw) if raw is not None else None
+                state, should_alert = machine.update(smoothed, now)
+                if state == PostureState.AWAY:
+                    ema.reset()
+                if should_alert:
+                    print(f"ALERT: {notifier.alert()}", flush=True)
+                if machine.event:
+                    print(f"[{machine.event}]", flush=True)
+
+                head = f"{state.value.upper()}"
+                if smoothed is not None:
+                    head += f"  score {smoothed:.2f}"
+                if state in (PostureState.SLOUCHING, PostureState.ALERTED):
+                    head += f"  {machine.slouch_seconds(now):.0f}s"
+                print(f"latency {timer.ms:6.1f} ms  {head} | " + " | ".join(lines), flush=True)
 
                 if debug:
                     if landmarks:
                         draw_skeleton(frame, landmarks, min_vis)
-                    _overlay(frame, [f"{timer.ms:.0f} ms", *lines])
+                    _overlay(frame, [head, *lines, f"{timer.ms:.0f} ms"], STATE_COLORS[state])
                     cv2.imshow(WINDOW, frame)
                     key = cv2.waitKey(1) & 0xFF
                     closed = cv2.getWindowProperty(WINDOW, cv2.WND_PROP_VISIBLE) < 1
