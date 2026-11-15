@@ -16,6 +16,7 @@ from src.engine.features import deviation_score, extract_features
 from src.engine.state import Ema, PostureStateMachine
 from src.schemas.models import Baseline, MonitorStatus, Point, PostureState
 from src.tools.capture import Camera
+from src.tools.examples import save_example
 from src.tools.logger import SessionLogger
 from src.tools.notifier import AlertNotifier, notify
 from src.tools.pose import PoseEstimator, draw_skeleton
@@ -25,8 +26,9 @@ from src.workflows.calibrate_flow import load_baseline
 
 log = logging.getLogger("posture")
 
-WINDOW = "Posture Monitor (debug) - press q or Esc to quit"
+WINDOW = "Posture Monitor (debug) - q/Esc quit, s save landmarks"
 QUIT_KEYS = {ord("q"), 27}
+SAVE_KEY = ord("s")
 PAUSE_POLL_SECONDS = 0.5
 STATE_COLORS = {  # BGR
     PostureState.AWAY: (160, 160, 160),
@@ -246,6 +248,13 @@ def run(
                             closed = cv2.getWindowProperty(WINDOW, cv2.WND_PROP_VISIBLE) < 1
                             if key in QUIT_KEYS or closed:
                                 control.stop()
+                            elif key == SAVE_KEY:
+                                if landmarks:
+                                    path = save_example(root / settings["examples_path"],
+                                                        landmarks)
+                                    log.info("Saved landmarks (no image) to %s", path)
+                                else:
+                                    log.info("No person in frame; nothing to save")
     except KeyboardInterrupt:
         control.stop()
     finally:
