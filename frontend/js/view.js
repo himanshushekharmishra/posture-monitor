@@ -83,6 +83,12 @@ export function renderFrame(msg) {
   const readout = $("readout");
   readout.dataset.state = msg.state;
   $("state-word").textContent = STATE_WORDS[msg.state];
+  // The header pill shows the state from every tab of the dashboard.
+  const pill = $("live-pill");
+  if (pill) {
+    pill.dataset.state = msg.state;
+    pill.textContent = STATE_WORDS[msg.state];
+  }
 
   let detail = NOTES[msg.note] ?? "";
   if (!detail) {
@@ -93,7 +99,7 @@ export function renderFrame(msg) {
   }
   $("state-detail").textContent = detail;
 
-  const meter = $("meter");
+  const meter = $("score-meter");
   if (msg.score === null) {
     $("meter-fill").style.height = "0%";
     $("meter-value").textContent = "–";
@@ -187,27 +193,5 @@ export function renderStats(stats) {
   const p = stats.labels.precision;
   $("precision").textContent = p === null ? "–" : `${Math.round(p * 100)}%`;
   $("missed").textContent = stats.labels.missed;
-
-  const body = $("sessions-body");
-  body.replaceChildren();
-  if (!stats.recent_sessions.length) {
-    const tr = body.insertRow();
-    const td = tr.insertCell();
-    td.colSpan = 5;
-    td.textContent = "No sessions yet.";
-    return;
-  }
-  for (const s of stats.recent_sessions) {
-    const tr = body.insertRow();
-    const start = new Date(s.started_at);
-    const length = s.ended_at ? (new Date(s.ended_at) - start) / 1000 : null;
-    const cells = [
-      start.toLocaleString([], { weekday: "short", hour: "2-digit", minute: "2-digit" }),
-      length === null ? "running" : formatSeconds(length),
-      s.slouches,
-      s.alerts,
-      s.avg_latency_ms === null ? "–" : `${s.avg_latency_ms.toFixed(0)} ms`,
-    ];
-    for (const c of cells) tr.insertCell().textContent = c;
-  }
+  // Session history has its own tab now (js/views/sessions.js).
 }

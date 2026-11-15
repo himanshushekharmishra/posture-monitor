@@ -32,7 +32,8 @@ Side inputs: calibration baseline (data/output/baseline.json), tray icon (pystra
                   username + password; secrets only in .env, never settings.json
 - frontend/       plain HTML/CSS/JS, no build step; MediaPipe runs in the browser
                   and only landmarks are sent to the backend. login.html = auth,
-                  index.html = app (needs login). No inline scripts (CSP).
+                  index.html = dashboard (needs login): js/dashboard.js menu +
+                  tabs, js/views/* pages, js/charts.js SVG charts. No inline scripts (CSP).
 - tests/          pytest
 
 ## Commands

@@ -253,14 +253,29 @@ def create_app(
             return
         await ws.accept()
         logger = SessionLogger(db_path, owner=user.id)
-        logger.start_session()
-        live_sessions.add(logger.session_id)
         session = PostureSession(settings, baselines.get(user.id))
         last_alert_id: int | None = None
         label_counts = {"correct": 0, "false_alarm": 0, "missed": 0}
-        pose_ms_total, pose_frames = 0.0, 0
         alerts_today = logger.alerts_today()
-        log.info("Web session %s connected for account %s", logger.session_id, user.id)
+        # A recorded session covers only time with frames arriving: it starts at the first
+        # frame, ends at the last one, and a long gap (camera stopped) splits it, so an
+        # open tab with the camera off never counts as monitoring time.
+        idle_gap = max(60.0, 3 * float(settings["away_timeout_seconds"]))
+        rec = {"on": False, "pose_ms": 0.0, "frames": 0, "last_mono": 0.0, "last_wall": None}
+
+        def stop_recording() -> None:
+            if rec["on"]:
+                avg = rec["pose_ms"] / rec["frames"] if rec["frames"] else None
+                logger.end_session(avg_cpu=None, avg_latency_ms=avg, ts=rec["last_wall"])
+                live_sessions.discard(logger.session_id)
+                log.info("Web session %s ended (account %s)", logger.session_id, user.id)
+            rec.update(on=False, pose_ms=0.0, frames=0)
+
+        def start_recording() -> None:
+            logger.start_session()
+            live_sessions.add(logger.session_id)
+            rec["on"] = True
+            log.info("Web session %s started (account %s)", logger.session_id, user.id)
 
         async def error(message: str) -> None:
             await ws.send_json({"type": "error", "message": message})
@@ -294,9 +309,17 @@ def create_app(
                     except ValueError as e:
                         await error(str(e))
                         continue
+                    now_mono = clock()
+                    if rec["on"] and now_mono - rec["last_mono"] > idle_gap:
+                        stop_recording()  # the camera was off for a while
+                        session.set_baseline(session.baseline)  # fresh smoothing and state
+                    if not rec["on"]:
+                        start_recording()
+                    rec["last_mono"] = now_mono
+                    rec["last_wall"] = datetime.now()
                     if msg.pose_ms is not None:
-                        pose_ms_total += msg.pose_ms
-                        pose_frames += 1
+                        rec["pose_ms"] += msg.pose_ms
+                        rec["frames"] += 1
                     # A calibration made in another tab of the same account applies here too.
                     current = baselines.get(user.id)
                     if current is not session.baseline and not session.calibrating:
@@ -329,6 +352,9 @@ def create_app(
                     if msg.kind != "missed" and last_alert_id is None:
                         await error("No alert to label yet")
                         continue
+                    if logger.session_id is None:
+                        await error("Start the camera first")
+                        continue
                     logger.label(msg.kind, None if msg.kind == "missed" else last_alert_id)
                     if msg.kind != "missed":
                         last_alert_id = None  # one answer per alert
@@ -338,11 +364,8 @@ def create_app(
         except WebSocketDisconnect:
             pass
         finally:
-            avg_pose = pose_ms_total / pose_frames if pose_frames else None
-            logger.end_session(avg_cpu=None, avg_latency_ms=avg_pose)  # CPU is the browser's
-            live_sessions.discard(logger.session_id)
+            stop_recording()  # CPU isn't recorded: it's the browser's, not ours
             logger.close()
-            log.info("Web session %s closed", logger.session_id)
 
     if frontend_dir.is_dir():
         app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")

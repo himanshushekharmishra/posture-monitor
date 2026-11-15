@@ -21,6 +21,21 @@
 6. After an alert, answer **Yes, I was** or **No, false alarm**; use
    **I slouched and got no alert** for misses. These feed the precision number.
 
+### The dashboard
+After logging in, the **Menu** button opens the side menu (on a phone it drops down):
+- **Monitor**: the live camera view. It keeps running while you look at other tabs;
+  the dot in the top bar shows your current posture from anywhere.
+- **Slouch meter**: today's slouches per hour against your 7/14/30-day average, a
+  day-by-day chart, and which hours of the day you slouch most. Each chart has a
+  table view.
+- **Previous sessions**: every session, newest first, with length, slouches, time
+  spent slouching and alerts. Open one to see its timeline. Only time with the
+  camera running counts.
+- **Profile**: your name, account type, how you sign in, and all-time numbers.
+- **Settings**: change your name and contact email, connect Google, GitHub or a
+  phone, change your password (other devices are logged out), or delete your
+  account and everything recorded for it.
+
 ### Setting up Google, GitHub and SMS
 They're off until you add their keys to `.env` (see `config/env.example`):
 - Google: create an OAuth client ID (Web application) in Google Cloud Console with

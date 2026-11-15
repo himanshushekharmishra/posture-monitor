@@ -9,90 +9,218 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="dashboard.css">
 </head>
-<body>
+<body class="app">
+  <a class="skip-link" href="#views">Skip to content</a>
   <header class="topbar">
-    <h1 class="brand">Posture Monitor</h1>
+    <div class="topbar-left">
+      <button type="button" class="menu-btn" id="menu-btn" aria-expanded="true"
+              aria-controls="sidenav">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+        <span>Menu</span>
+      </button>
+      <h1 class="brand">Posture Monitor</h1>
+    </div>
     <div class="topbar-right">
+      <a class="live-pill" id="live-pill" href="#monitor" data-state="away"
+         title="Current posture">Away</a>
       <p class="link-status" id="link-status" data-state="connecting">Connecting to the server</p>
       <p class="account"><span id="account-name"></span>
         <button type="button" class="quiet" id="logout-btn">Log out</button></p>
     </div>
   </header>
   <p class="trial-banner" id="trial-banner" hidden></p>
+  <p class="toast" id="toast" role="status" hidden></p>
 
-  <main class="layout">
-    <section class="camera" aria-label="Camera">
-      <div class="stage" id="stage" data-camera="off">
-        <video id="video" playsinline muted></video>
-        <canvas id="overlay" aria-hidden="true"></canvas>
-        <div class="stage-message" id="stage-message">
-          <p class="stage-title">Your camera is off</p>
-          <p>Start it to check your posture. The video stays in this browser; only 33
-            body points per frame go to the local server.</p>
+  <div class="shell" id="shell">
+    <nav class="sidenav" id="sidenav" aria-label="Sections">
+      <ul>
+        <li><a href="#monitor" data-view="monitor">Monitor</a></li>
+        <li><a href="#meter" data-view="meter">Slouch meter</a></li>
+        <li><a href="#sessions" data-view="sessions">Previous sessions</a></li>
+        <li><a href="#profile" data-view="profile">Profile</a></li>
+        <li><a href="#settings" data-view="settings">Settings</a></li>
+      </ul>
+    </nav>
+
+    <div class="views" id="views" tabindex="-1">
+      <!-- Monitor: the live camera view -->
+      <section class="view" id="view-monitor" aria-labelledby="h-monitor">
+        <h2 class="visually-hidden" id="h-monitor">Monitor</h2>
+        <div class="layout">
+          <section class="camera" aria-label="Camera">
+            <div class="stage" id="stage" data-camera="off">
+              <video id="video" playsinline muted></video>
+              <canvas id="overlay" aria-hidden="true"></canvas>
+              <div class="stage-message" id="stage-message">
+                <p class="stage-title">Your camera is off</p>
+                <p>Start it to check your posture. The video stays in this browser; only 33
+                  body points per frame go to the server.</p>
+              </div>
+              <p class="calibration-banner" id="calibration-banner" hidden></p>
+            </div>
+            <div class="controls">
+              <button type="button" class="primary" id="camera-btn" disabled>Start camera</button>
+              <button type="button" id="calibrate-btn" disabled>Calibrate</button>
+              <button type="button" id="notify-btn">Turn on notifications</button>
+            </div>
+            <p class="hint" id="hint">Loading the pose model…</p>
+          </section>
+
+          <section class="readout" aria-label="Posture" data-state="away" id="readout">
+            <div class="state-block">
+              <p class="state-word" id="state-word" aria-live="polite">Away</p>
+              <p class="state-detail" id="state-detail">No one in view</p>
+            </div>
+
+            <div class="plumb" role="meter" aria-label="Slouch score" aria-valuemin="0"
+                 aria-valuemax="1" aria-valuenow="0" id="score-meter">
+              <div class="plumb-track">
+                <div class="plumb-fill" id="meter-fill"></div>
+                <div class="plumb-threshold" id="meter-threshold">
+                  <span>alert line</span>
+                </div>
+              </div>
+              <p class="plumb-value" id="meter-value">–</p>
+            </div>
+
+            <dl class="features" id="features">
+              <p class="features-note" id="features-note">Compared with your calibrated posture</p>
+              <div><dt>Head height above shoulders</dt><dd id="f-neck">–</dd></div>
+              <div><dt>Closeness to screen</dt><dd id="f-lean">–</dd></div>
+              <div><dt>Shoulder tilt</dt><dd id="f-shoulder">–</dd></div>
+              <div><dt>Head tilt</dt><dd id="f-head">–</dd></div>
+            </dl>
+
+            <div class="alert-box" id="alert-box" hidden>
+              <p class="alert-text" id="alert-text"></p>
+              <p class="alert-question">Were you really slouching?</p>
+              <div class="alert-actions">
+                <button type="button" class="primary" data-label="correct">Yes, I was</button>
+                <button type="button" data-label="false_alarm">No, false alarm</button>
+              </div>
+            </div>
+            <button type="button" class="quiet" id="missed-btn" disabled>I slouched and got no alert</button>
+          </section>
+
+          <section class="today" aria-label="Today">
+            <h2>Today</h2>
+            <div class="today-figures">
+              <p><strong id="alerts-today">0</strong> alerts</p>
+              <p><strong id="precision">–</strong> of labelled alerts were right</p>
+              <p><strong id="missed">0</strong> missed slouches reported</p>
+            </div>
+          </section>
         </div>
-        <p class="calibration-banner" id="calibration-banner" hidden></p>
-      </div>
-      <div class="controls">
-        <button type="button" class="primary" id="camera-btn" disabled>Start camera</button>
-        <button type="button" id="calibrate-btn" disabled>Calibrate</button>
-        <button type="button" id="notify-btn">Turn on notifications</button>
-      </div>
-      <p class="hint" id="hint">Loading the pose model…</p>
-    </section>
+      </section>
 
-    <section class="readout" aria-label="Posture" data-state="away" id="readout">
-      <div class="state-block">
-        <p class="state-word" id="state-word" aria-live="polite">Away</p>
-        <p class="state-detail" id="state-detail">No one in view</p>
-      </div>
-
-      <div class="plumb" role="meter" aria-label="Slouch score" aria-valuemin="0"
-           aria-valuemax="1" aria-valuenow="0" id="meter">
-        <div class="plumb-track">
-          <div class="plumb-fill" id="meter-fill"></div>
-          <div class="plumb-threshold" id="meter-threshold">
-            <span>alert line</span>
+      <!-- Slouch meter -->
+      <section class="view page" id="view-meter" aria-labelledby="h-meter" hidden>
+        <div class="page-head">
+          <h2 id="h-meter">Slouch meter</h2>
+          <div class="range" role="group" aria-label="Time range">
+            <button type="button" data-days="7">7 days</button>
+            <button type="button" data-days="14" aria-pressed="true">14 days</button>
+            <button type="button" data-days="30">30 days</button>
           </div>
         </div>
-        <p class="plumb-value" id="meter-value">–</p>
-      </div>
+        <div class="meter-hero" id="meter-hero"></div>
+        <div class="figures" id="meter-figures"></div>
+        <figure class="chart-block">
+          <figcaption>
+            <span class="chart-title">Slouches per hour of monitoring</span>
+            <button type="button" class="quiet table-toggle" data-table="daily">Show as table</button>
+          </figcaption>
+          <div class="chart" id="chart-daily"></div>
+          <div class="chart-table" id="table-daily" hidden></div>
+        </figure>
+        <figure class="chart-block">
+          <figcaption>
+            <span class="chart-title">When you slouch, by hour of the day</span>
+            <button type="button" class="quiet table-toggle" data-table="hours">Show as table</button>
+          </figcaption>
+          <div class="chart" id="chart-hours"></div>
+          <div class="chart-table" id="table-hours" hidden></div>
+        </figure>
+      </section>
 
-      <dl class="features" id="features">
-        <p class="features-note" id="features-note">Compared with your calibrated posture</p>
-        <div><dt>Head height above shoulders</dt><dd id="f-neck">–</dd></div>
-        <div><dt>Closeness to screen</dt><dd id="f-lean">–</dd></div>
-        <div><dt>Shoulder tilt</dt><dd id="f-shoulder">–</dd></div>
-        <div><dt>Head tilt</dt><dd id="f-head">–</dd></div>
-      </dl>
+      <!-- Previous sessions -->
+      <section class="view page" id="view-sessions" aria-labelledby="h-sessions" hidden>
+        <div class="page-head"><h2 id="h-sessions">Previous sessions</h2></div>
+        <div id="session-list"></div>
+        <button type="button" id="more-sessions" hidden>Show older sessions</button>
+      </section>
 
-      <div class="alert-box" id="alert-box" hidden>
-        <p class="alert-text" id="alert-text"></p>
-        <p class="alert-question">Were you really slouching?</p>
-        <div class="alert-actions">
-          <button type="button" class="primary" data-label="correct">Yes, I was</button>
-          <button type="button" data-label="false_alarm">No, false alarm</button>
-        </div>
-      </div>
-      <button type="button" class="quiet" id="missed-btn" disabled>I slouched and got no alert</button>
-    </section>
+      <!-- Profile -->
+      <section class="view page" id="view-profile" aria-labelledby="h-profile" hidden>
+        <div class="page-head"><h2 id="h-profile">Profile</h2></div>
+        <div id="profile-body"></div>
+      </section>
 
-    <section class="today" aria-label="Today">
-      <h2>Today</h2>
-      <div class="today-figures">
-        <p><strong id="alerts-today">0</strong> alerts</p>
-        <p><strong id="precision">–</strong> of labelled alerts were right</p>
-        <p><strong id="missed">0</strong> missed slouches reported</p>
-      </div>
-      <h2>Recent sessions</h2>
-      <table class="sessions">
-        <thead><tr><th scope="col">Started</th><th scope="col">Length</th>
-          <th scope="col">Slouches</th><th scope="col">Alerts</th><th scope="col">Pose time</th></tr></thead>
-        <tbody id="sessions-body"><tr><td colspan="5">No sessions yet.</td></tr></tbody>
-      </table>
-    </section>
-  </main>
+      <!-- Settings -->
+      <section class="view page" id="view-settings" aria-labelledby="h-settings" hidden>
+        <div class="page-head"><h2 id="h-settings">Settings</h2></div>
+
+        <form class="settings-block" id="profile-form" novalidate>
+          <h3>Personal info</h3>
+          <label for="set-name">Name</label>
+          <input id="set-name" name="display_name" autocomplete="name" maxlength="60">
+          <label for="set-email">Contact email</label>
+          <input id="set-email" name="email" type="email" autocomplete="email" maxlength="254">
+          <p class="field-rule">Your username can't be changed.</p>
+          <button type="submit" class="primary">Save changes</button>
+          <p class="form-status" role="status"></p>
+        </form>
+
+        <section class="settings-block" aria-labelledby="h-connected">
+          <h3 id="h-connected">Connected accounts</h3>
+          <p class="field-rule">Use these to log in without your password. Connecting one
+            ends a guest trial and keeps your account.</p>
+          <ul class="connections" id="connections"></ul>
+          <form id="link-phone-form" class="inline-phone" novalidate hidden>
+            <label for="link-phone">Phone number with country code</label>
+            <input id="link-phone" name="phone" type="tel" autocomplete="tel" maxlength="24"
+                   placeholder="+91 98765 43210">
+            <button type="submit">Send code</button>
+            <label for="link-code" hidden>6-digit code</label>
+            <input id="link-code" name="code" inputmode="numeric" autocomplete="one-time-code"
+                   maxlength="6" hidden>
+            <button type="button" id="link-verify" hidden>Verify and connect</button>
+            <p class="form-status" role="status"></p>
+          </form>
+        </section>
+
+        <form class="settings-block" id="password-form" novalidate>
+          <h3>Change password</h3>
+          <label for="pw-current">Current password</label>
+          <input id="pw-current" name="current" type="password" autocomplete="current-password" maxlength="128">
+          <label for="pw-new">New password</label>
+          <input id="pw-new" name="new" type="password" autocomplete="new-password" maxlength="128">
+          <p class="field-rule">At least 10 characters. You'll stay logged in here; other
+            devices will be logged out.</p>
+          <label for="pw-confirm">Confirm new password</label>
+          <input id="pw-confirm" name="confirm" type="password" autocomplete="new-password" maxlength="128">
+          <button type="submit" class="primary">Change password</button>
+          <p class="form-status" role="status"></p>
+        </form>
+
+        <form class="settings-block danger" id="delete-form" novalidate>
+          <h3>Delete account</h3>
+          <p class="field-rule">Deletes your account, calibration and every recorded session.
+            This can't be undone.</p>
+          <label for="del-username">Type your username to confirm</label>
+          <input id="del-username" name="username" autocomplete="off" maxlength="32">
+          <label for="del-password">Password</label>
+          <input id="del-password" name="password" type="password" autocomplete="current-password" maxlength="128">
+          <button type="submit" class="danger-btn">Delete my account</button>
+          <p class="form-status" role="status"></p>
+        </form>
+      </section>
+    </div>
+  </div>
 
   <script type="module" src="js/main.js"></script>
+  <script type="module" src="js/dashboard.js"></script>
 </body>
 </html>

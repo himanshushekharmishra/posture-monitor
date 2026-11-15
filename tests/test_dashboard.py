@@ -177,3 +177,35 @@ def test_delete_account_removes_everything(env):
     assert lg.recent_sessions() == []
     lg.close()
     signup(client, "leaver")  # the name is free again
+
+
+def test_web_sessions_only_count_time_with_frames(tmp_path):
+    """An open tab with the camera off isn't monitoring time; a long gap splits sessions."""
+    (tmp_path / "messages").mkdir()
+    shutil.copy(ROOT / "messages" / "alerts.json", tmp_path / "messages")
+    settings = dict(SETTINGS)
+    settings["web_allowed_hosts"] = [*SETTINGS["web_allowed_hosts"], "testserver"]
+    clock = {"t": 1000.0}
+    app = create_app(settings, tmp_path, clock=lambda: clock["t"],
+                     auth_store=AuthStore(tmp_path / settings["db_path"], secret=b"s" * 32))
+    with TestClient(app) as client:
+        signup(client, "framer")
+        with client.websocket_connect("/ws") as ws:
+            ws.receive_json()
+            clock["t"] += 600  # ten minutes with the camera off
+        assert client.get("/api/sessions").json()["sessions"] == []
+
+        with client.websocket_connect("/ws") as ws:
+            ws.receive_json()
+            for _ in range(3):
+                ws.send_json({"type": "frame", "landmarks": None})
+                ws.receive_json()
+                clock["t"] += 0.2
+            live = client.get("/api/sessions").json()["sessions"]
+            assert len(live) == 1 and live[0]["status"] == "live"
+            clock["t"] += 300  # camera stopped for five minutes, then started again
+            ws.send_json({"type": "frame", "landmarks": None})
+            ws.receive_json()
+        sessions = client.get("/api/sessions").json()["sessions"]
+        assert len(sessions) == 2 and all(s["status"] == "ended" for s in sessions)
+        assert all(s["minutes"] < 1 for s in sessions)  # neither counts the gap

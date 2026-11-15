@@ -12,7 +12,7 @@ Last updated: 2026-11-15, on `main`, after the code review fixes.
 | Desktop app (5 build phases) | done |
 | Web app (`backend/` + `frontend/`) | done, with accounts; live webcam in the page not yet tried by a person |
 | Code review | done: 16 problems found and fixed (table below) |
-| Tests | 120 passing (`pytest -q`) |
+| Tests | 121 passing (`pytest -q`) |
 | Benchmarks | measured, but only with nobody in frame |
 | Alert precision | not measured yet (needs a 30-minute labelled session) |
 
@@ -75,7 +75,7 @@ Also re-checked after these fixes: the real web page still connects (its own
 origin is accepted), a request with a foreign Host header gets 400, and a running
 desktop monitor reloaded a baseline written by another process mid-run.
 
-## Web accounts (in progress)
+## Web accounts and dashboard
 
 Goal: a secure login page (log in / sign up with Google, GitHub or phone, or a guest
 trial; every account has a username and password), then a dashboard with profile,
@@ -85,8 +85,8 @@ previous sessions, a slouch meter and settings.
 |---|---|---|
 | Backend: accounts, sessions, phone codes, Google/GitHub OAuth, per-account data | done | `5648b07` |
 | Login and sign-up page; app page shows the account, log out, guest trial days | done | this commit |
-| Dashboard backend: session history, slouch insights, profile edit, password change, delete account | done | this commit |
-| Dashboard pages: side menu, profile, previous sessions, slouch meter, settings | next | |
+| Dashboard backend: session history, slouch insights, profile edit, password change, delete account | done | `c24d042` |
+| Dashboard pages: side menu, profile, previous sessions, slouch meter, settings | done | this commit |
 
 Security built in: scrypt password hashes; session cookies that are HttpOnly,
 SameSite=Lax and Secure on https, stored only as hashes; lockout after 8 wrong
@@ -101,6 +101,17 @@ password ("Wrong username or password."), log in, the app page showing the accou
 and connecting, the pose model loading under the new security headers, and the
 login page at phone width with an error message. Fixed on the way: a new 14-day
 trial showed "13 days left" (rounding), and provider buttons lacked accessible names.
+
+Dashboard checked in a browser with a seeded test account (10 days of sessions):
+the slouch meter (hero number, 14-day chart, hour-of-day chart, range buttons),
+previous sessions with a timeline, profile, settings (bad email caught, name saved
+and shown in the header, phone connected which ended the guest trial), the menu
+collapsing on desktop and dropping down at phone width, no sideways scrolling.
+Fixed on the way: an open tab with the camera off counted as monitoring time (web
+sessions now cover only time with frames; test added); opening `#meter` jumped down
+the page because the score meter had the id `meter`; overlapping last labels on the
+hour chart; wrapping times in the session timeline; profile spacing and link colour.
+The login page's privacy line was removed on request (`a76c67d`).
 
 Needs you: Google and GitHub sign-in work once you register the app and put the
 IDs in `.env` (steps in `config/env.example`); real SMS needs a Twilio account.

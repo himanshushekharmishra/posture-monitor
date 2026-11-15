@@ -161,6 +161,15 @@ inline scripts, no framing, nosniff).
 | `frontend/js/view.js`, `skeleton.js` | everything that draws or writes to the page |
 | `frontend/login.html`, `auth.css`, `js/login.js` | log in, sign up, phone codes, finishing a verified sign-up, trial ended |
 | `frontend/js/api.js` | JSON helper for `/api/*` that surfaces the server's error message |
+| `frontend/js/dashboard.js` | side menu (collapses on desktop, drops down on phones) and tab switching by `#hash` |
+| `frontend/js/views/*.js` | the Slouch meter, Previous sessions, Profile and Settings tabs |
+| `frontend/js/charts.js`, `dom.js` | dependency-free SVG bar chart with tooltips and table view; text-only DOM helpers |
+| `backend/insights.py` | pure: session summaries (slouch time from slouch_start to recovered/away/end) and slouch-meter numbers |
+| `backend/history.py` | owner-scoped reads of sessions and events |
+
+A web session is recorded only while frames arrive: it starts at the first frame,
+ends at the last one, and a gap of a minute or more (camera stopped) starts a new
+one, so an open tab with the camera off never counts as monitoring time.
 
 The frame loop is paced by a timer inside a Web Worker, because browsers throttle
 ordinary timers in background tabs (Chrome down to once a minute), which would
