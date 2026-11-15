@@ -36,6 +36,7 @@ from src.schemas.models import Baseline  # noqa: E402
 from src.tools.capture import open_source  # noqa: E402
 from src.tools.pose import PoseEstimator  # noqa: E402
 from src.utils.timing import FrameThrottle, LatencyStats, LatencyTimer  # noqa: E402
+from src.tools.logger import LabelSummary, SessionLogger  # noqa: E402
 from src.workflows.calibrate_flow import load_baseline  # noqa: E402
 
 DOC_PATH = ROOT / "docs" / "benchmarks.md"
@@ -153,12 +154,36 @@ def machine_info(settings: dict, video: Path | None = None) -> dict[str, str]:
     }
 
 
+def precision_text(labels: LabelSummary | None) -> str:
+    if labels is None or labels.labelled_alerts == 0:
+        if labels and labels.missed:
+            return f"no alerts labelled yet ({labels.missed} missed slouches reported)"
+        return "not measured yet (run `python -m src.main --label` for 30 min)"
+    text = (f"{labels.precision:.0%} ({labels.correct} of {labels.labelled_alerts} alerts right, "
+            f"{labels.missed} missed slouches, {labels.minutes:.0f} min over "
+            f"{labels.sessions} session{'s' if labels.sessions != 1 else ''})")
+    if labels.minutes < 30:
+        text += "; under 30 min, so treat as preliminary"
+    return text
+
+
+def load_labels(db_path: Path) -> LabelSummary | None:
+    if not db_path.is_file():
+        return None
+    lg = SessionLogger(db_path)
+    try:
+        return lg.label_summary()
+    finally:
+        lg.close()
+
+
 def render_markdown(
     results: list[PassResult], info: dict[str, str], model_load_ms: float,
-    default_fps: float, calibrated: bool,
+    default_fps: float, calibrated: bool, labels: LabelSummary | None = None,
 ) -> str:
     main = next((r for r in results if r.target_fps == default_fps), results[0])
     target_ok = "meets" if main.cpu_machine < 10 else "misses"
+    precision = precision_text(labels)
     lines = [
         "# Benchmarks",
         "",
@@ -171,7 +196,7 @@ def render_markdown(
         f"| Avg CPU % (whole machine) | {main.cpu_machine:.1f}% ({target_ok} the <10% target) |",
         f"| Avg latency per frame (ms) | {main.frame.mean:.1f} (p95 {main.frame.p95:.1f}) |",
         f"| Processed FPS | {main.fps:.2f} |",
-        "| Alert precision (30-min labelled session) | not measured yet |",
+        f"| Alert precision (30-min labelled session) | {precision} |",
         "",
         "## By frame rate",
         "",
@@ -204,8 +229,9 @@ def render_markdown(
         "more work while tracking a person, so numbers with nobody in frame are optimistic.",
         f"- Baseline {'loaded' if calibrated else 'missing'}: "
         + ("scores were computed." if calibrated else "features ran but no score was computed."),
-        "- **Alert precision** needs a 30-minute session where each alert is marked right or "
-        "wrong by the user; it isn't measured yet.",
+        "- **Alert precision** = alerts marked right / all labelled alerts, from "
+        "`python -m src.main --label` sessions (y/n after each alert, m for a slouch with no "
+        "alert), read from the `labels` table in the SQLite log.",
         "",
     ]
     findings = []
@@ -281,7 +307,8 @@ def main() -> None:
     if not args.no_write:
         DOC_PATH.write_text(
             render_markdown(results, machine_info(settings, video), pipe.model_load_ms,
-                            float(settings["process_fps"]), baseline is not None),
+                            float(settings["process_fps"]), baseline is not None,
+                            load_labels(ROOT / settings["db_path"])),
             encoding="utf-8",
         )
         print(f"Wrote {DOC_PATH}")

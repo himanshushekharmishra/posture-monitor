@@ -6,6 +6,13 @@ CREATE TABLE events (id INTEGER PRIMARY KEY, session_id INTEGER REFERENCES sessi
                      ts TEXT, type TEXT CHECK(type IN ('slouch_start','alert','recovered','away')),
                      score REAL);
 
+CREATE TABLE labels (id INTEGER PRIMARY KEY, session_id INTEGER REFERENCES sessions(id),
+                     event_id INTEGER REFERENCES events(id), ts TEXT,
+                     kind TEXT CHECK(kind IN ('correct','false_alarm','missed')));
+
+`labels` is filled only in --label sessions: the user marks each alert as correct
+or a false alarm, and reports slouches that got no alert as missed.
+
 Timestamps are local time in ISO 8601 with offset, so the first 10 characters are
 the local date. Only events and summary numbers are stored, never images.
 """
@@ -13,6 +20,7 @@ from __future__ import annotations
 
 import sqlite3
 import threading
+from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 
@@ -27,7 +35,29 @@ CREATE TABLE IF NOT EXISTS events (
     score REAL
 );
 CREATE INDEX IF NOT EXISTS events_ts ON events(ts);
+CREATE TABLE IF NOT EXISTS labels (
+    id INTEGER PRIMARY KEY, session_id INTEGER REFERENCES sessions(id),
+    event_id INTEGER REFERENCES events(id), ts TEXT,
+    kind TEXT CHECK(kind IN ('correct','false_alarm','missed'))
+);
 """
+
+
+@dataclass(frozen=True)
+class LabelSummary:
+    correct: int
+    false_alarm: int
+    missed: int
+    sessions: int
+    minutes: float  # total length of the labelled sessions
+
+    @property
+    def labelled_alerts(self) -> int:
+        return self.correct + self.false_alarm
+
+    @property
+    def precision(self) -> float | None:
+        return self.correct / self.labelled_alerts if self.labelled_alerts else None
 
 # State machine event name -> events.type. Others (e.g. "returned") aren't stored.
 EVENT_TYPES = {
@@ -61,17 +91,50 @@ class SessionLogger:
         self.session_id = int(cur.lastrowid)
         return self.session_id
 
-    def log_event(self, event: str, score: float | None, ts: datetime | None = None) -> bool:
-        """Store a state machine event. Returns False for events that aren't stored."""
+    def log_event(
+        self, event: str, score: float | None, ts: datetime | None = None
+    ) -> int | None:
+        """Store a state machine event. Returns its row id, or None if it isn't stored."""
         kind = EVENT_TYPES.get(event)
         if kind is None:
-            return False
+            return None
         with self._lock, self._conn:
-            self._conn.execute(
+            cur = self._conn.execute(
                 "INSERT INTO events (session_id, ts, type, score) VALUES (?, ?, ?, ?)",
                 (self.session_id, _now_iso(ts), kind, score),
             )
-        return True
+        return int(cur.lastrowid)
+
+    def label(self, kind: str, event_id: int | None = None, ts: datetime | None = None) -> None:
+        """kind: 'correct' / 'false_alarm' (with the alert's event_id) or 'missed'."""
+        with self._lock, self._conn:
+            self._conn.execute(
+                "INSERT INTO labels (session_id, event_id, ts, kind) VALUES (?, ?, ?, ?)",
+                (self.session_id, event_id, _now_iso(ts), kind),
+            )
+
+    def label_summary(self, session_id: int | None = None) -> LabelSummary:
+        """Totals over all labelled sessions, or just one."""
+        where, args = ("WHERE l.session_id = ?", (session_id,)) if session_id else ("", ())
+        with self._lock:
+            counts = dict(self._conn.execute(
+                f"SELECT kind, COUNT(*) FROM labels l {where} GROUP BY kind", args
+            ).fetchall())
+            rows = self._conn.execute(
+                "SELECT started_at, ended_at FROM sessions WHERE id IN "
+                f"(SELECT DISTINCT session_id FROM labels l {where})", args
+            ).fetchall()
+        minutes = sum(
+            (datetime.fromisoformat(end) - datetime.fromisoformat(start)).total_seconds() / 60
+            for start, end in rows if start and end
+        )
+        return LabelSummary(
+            correct=counts.get("correct", 0),
+            false_alarm=counts.get("false_alarm", 0),
+            missed=counts.get("missed", 0),
+            sessions=len(rows),
+            minutes=minutes,
+        )
 
     def end_session(
         self, avg_cpu: float | None, avg_latency_ms: float | None, ts: datetime | None = None

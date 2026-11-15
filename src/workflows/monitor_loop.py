@@ -90,6 +90,42 @@ class MonitorControl:
                 self.on_status(new)
 
 
+class AlertLabeller:
+    """Keys for a --label session: after an alert, y = it was right, n = false alarm.
+    m at any time = "I was slouching and got no alert". Each key returns
+    (kind, alert event id or None) for the logger, or None if nothing to record."""
+
+    YES, NO, MISSED = ord("y"), ord("n"), ord("m")
+
+    def __init__(self) -> None:
+        self.pending: int | None = None
+        self.has_pending = False
+        self.counts = {"correct": 0, "false_alarm": 0, "missed": 0}
+
+    def alert_fired(self, event_id: int | None) -> None:
+        self.pending, self.has_pending = event_id, True
+
+    def handle_key(self, key: int) -> tuple[str, int | None] | None:
+        if key in (self.YES, self.NO) and self.has_pending:
+            kind = "correct" if key == self.YES else "false_alarm"
+            result = (kind, self.pending)
+            self.pending, self.has_pending = None, False
+        elif key == self.MISSED:
+            kind, result = "missed", ("missed", None)
+        else:
+            return None
+        self.counts[kind] += 1
+        return result
+
+    def overlay_lines(self) -> list[str]:
+        c = self.counts
+        lines = [f"labels: {c['correct']} right, {c['false_alarm']} wrong, "
+                 f"{c['missed']} missed (m = missed slouch)"]
+        if self.has_pending:
+            lines.insert(0, ">> ALERT - was it right? y = yes, n = no")
+        return lines
+
+
 def _score_frame(
     landmarks: list[Point] | None, baseline: Baseline | None, settings: dict
 ) -> tuple[float | None, list[str]]:
@@ -121,11 +157,14 @@ def run(
     control: MonitorControl | None = None,
     video: Path | None = None,
     tray: bool = False,
+    label: bool = False,
 ) -> None:
     """Run until stopped. `video` replaces the webcam with a recording (stops at its end);
-    `tray` means a tray icon is attached (only changes wording and the first-run hint)."""
+    `tray` means a tray icon is attached (only changes wording and the first-run hint);
+    `label` (needs debug) lets the user mark alerts right/wrong to measure precision."""
     root = root or Path.cwd()
     control = control or MonitorControl()
+    labeller = AlertLabeller() if label and debug else None
     model_path = str((root / settings["model_path"]).resolve())
     baseline_path = root / settings["baseline_path"]
     min_vis = float(settings["min_visibility"])
@@ -228,12 +267,15 @@ def run(
                         state, should_alert = machine.update(smoothed, now)
                         if state == PostureState.AWAY:
                             ema.reset()
+                        event_id = None
                         if machine.event:
                             log.info("event %s (score %s)", machine.event,
                                      "n/a" if smoothed is None else f"{smoothed:.2f}")
-                            logger.log_event(machine.event, smoothed)
+                            event_id = logger.log_event(machine.event, smoothed)
                         if should_alert:
                             log.info("alert: %s", notifier.alert())
+                            if labeller:
+                                labeller.alert_fired(event_id)
                         control.publish(
                             state=state,
                             alerts_today=logger.alerts_today()
@@ -250,13 +292,18 @@ def run(
                                   flush=True)
                             if landmarks:
                                 draw_skeleton(frame, landmarks, min_vis)
-                            _overlay(frame, [head, *lines, f"{timer.ms:.0f} ms"],
+                            extra = labeller.overlay_lines() if labeller else []
+                            _overlay(frame, [head, *lines, f"{timer.ms:.0f} ms", *extra],
                                      STATE_COLORS[state])
                             cv2.imshow(WINDOW, frame)
                             key = cv2.waitKey(1) & 0xFF
                             closed = cv2.getWindowProperty(WINDOW, cv2.WND_PROP_VISIBLE) < 1
                             if key in QUIT_KEYS or closed:
                                 control.stop()
+                            elif labeller and (labelled := labeller.handle_key(key)):
+                                kind, alert_id = labelled
+                                logger.label(kind, alert_id)
+                                log.info("label: %s", kind)
                             elif key == SAVE_KEY:
                                 if landmarks:
                                     path = save_example(root / settings["examples_path"],
@@ -273,6 +320,11 @@ def run(
         avg_cpu = proc.cpu_percent(None) / (psutil.cpu_count() or 1)
         avg_latency = latency_total / frames if frames else None
         logger.end_session(avg_cpu, avg_latency)
+        if labeller:
+            s = logger.label_summary(logger.session_id)
+            p = "n/a" if s.precision is None else f"{s.precision:.0%}"
+            log.info("Labelled session: %d correct, %d false alarms, %d missed; precision %s "
+                     "over %.0f min", s.correct, s.false_alarm, s.missed, p, s.minutes)
         logger.close()
         log.info(
             "Monitoring stopped: %d frames, avg latency %s ms, avg CPU %.1f%%",

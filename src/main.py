@@ -23,7 +23,13 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--video", type=Path, metavar="PATH",
                    help="read a recorded video (e.g. data/input/test.mp4) instead of the "
                         "webcam; runs in the console and stops at the end of the video")
-    return p.parse_args()
+    p.add_argument("--label", action="store_true",
+                   help="labelled session for alert precision (opens the debug window): "
+                        "y/n after each alert, m for a slouch that got no alert")
+    args = p.parse_args()
+    if args.label:
+        args.debug = True
+    return args
 
 
 def load_settings(path: Path = SETTINGS_PATH, overrides: bool = True) -> dict:
@@ -64,7 +70,7 @@ def main() -> None:
 
     video = args.video.resolve() if args.video else None
     if args.debug or video:
-        monitor_loop.run(settings, debug=args.debug, root=ROOT, video=video)
+        monitor_loop.run(settings, debug=args.debug, root=ROOT, video=video, label=args.label)
     else:
         monitor_loop.run_headless(settings, root=ROOT)
 

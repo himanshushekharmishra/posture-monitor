@@ -49,3 +49,32 @@ def test_reopening_keeps_history(tmp_path):
     assert b.alerts_today() == 1
     assert b.start_session() == 2
     b.close()
+
+
+def test_labels_and_precision_summary(tmp_path):
+    lg = SessionLogger(tmp_path / "p.db")
+    start = datetime(2026, 1, 1, 9, 0)
+    sid = lg.start_session(ts=start)
+    a1 = lg.log_event("alerted", 0.5)
+    a2 = lg.log_event("alerted", 0.4)
+    a3 = lg.log_event("alerted", 0.3)
+    assert isinstance(a1, int) and a1 != a2
+    lg.label("correct", a1)
+    lg.label("correct", a2)
+    lg.label("false_alarm", a3)
+    lg.label("missed")
+    lg.end_session(1.0, 12.0, ts=start + timedelta(minutes=30))
+    s = lg.label_summary()
+    assert (s.correct, s.false_alarm, s.missed, s.sessions) == (2, 1, 1, 1)
+    assert s.precision == 2 / 3 and s.minutes == 30
+    assert lg.label_summary(sid) == s
+    lg.start_session()  # an unlabelled session doesn't count
+    assert lg.label_summary().sessions == 1
+    lg.close()
+
+
+def test_empty_label_summary(tmp_path):
+    lg = SessionLogger(tmp_path / "p.db")
+    s = lg.label_summary()
+    assert s.labelled_alerts == 0 and s.precision is None and s.minutes == 0
+    lg.close()
