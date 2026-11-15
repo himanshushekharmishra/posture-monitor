@@ -44,3 +44,13 @@ class PostureState(str, Enum):
     GOOD = "good"
     SLOUCHING = "slouching"
     ALERTED = "alerted"
+
+
+@dataclass(frozen=True)
+class MonitorStatus:
+    """What the tray shows. `note` is e.g. "camera unavailable" or "calibrating"."""
+
+    state: PostureState = PostureState.AWAY
+    paused: bool = False
+    alerts_today: int = 0
+    note: str = ""

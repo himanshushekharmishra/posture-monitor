@@ -18,6 +18,8 @@
   "away_timeout_seconds": 10,
   "alerts_path": "messages/alerts.json",
   "notification_timeout_seconds": 10,
+  "camera_retry_seconds": 10,
   "db_path": "data/output/posture.db",
+  "app_log_path": "data/output/app.log",
   "baseline_path": "data/output/baseline.json"
 }

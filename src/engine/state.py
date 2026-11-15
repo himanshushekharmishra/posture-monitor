@@ -68,6 +68,13 @@ class PostureStateMachine:
             recovery_margin=float(settings["recovery_margin"]),
         )
 
+    def reset(self) -> None:
+        """Back to AWAY (e.g. when paused). Keeps the cooldown so a pause can't skip it."""
+        self.state = PostureState.AWAY
+        self.event = None
+        self._last_seen = None
+        self._slouch_start = None
+
     def slouch_seconds(self, now: float) -> float:
         return 0.0 if self._slouch_start is None else now - self._slouch_start
 

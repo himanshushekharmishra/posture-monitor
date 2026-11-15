@@ -1,10 +1,16 @@
-"""Entry point: python -m src.main [--debug] [--calibrate]"""
+"""Entry point: python -m src.main [--debug] [--calibrate]
+
+No flags: runs headless with a tray icon (scripts\\run.ps1 starts it this way).
+"""
 import argparse
 import json
+import logging
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SETTINGS_PATH = ROOT / "config" / "settings.json"
+LOG_FORMAT = "%(asctime)s %(levelname)s %(message)s"
 
 
 def parse_args() -> argparse.Namespace:
@@ -19,9 +25,21 @@ def load_settings(path: Path = SETTINGS_PATH) -> dict:
         return json.load(f)
 
 
+def setup_logging(settings: dict, to_file: bool) -> None:
+    if to_file or sys.stdout is None:  # pythonw.exe has no console
+        path = ROOT / settings["app_log_path"]
+        path.parent.mkdir(parents=True, exist_ok=True)
+        logging.basicConfig(filename=str(path), level=logging.INFO, format=LOG_FORMAT,
+                            encoding="utf-8")
+    else:
+        logging.basicConfig(stream=sys.stdout, level=logging.INFO, format=LOG_FORMAT)
+
+
 def main() -> None:
     args = parse_args()
     settings = load_settings()
+    headless = not (args.debug or args.calibrate)
+    setup_logging(settings, to_file=headless)
     if args.calibrate:
         from src.workflows import calibrate_flow
 
@@ -29,7 +47,10 @@ def main() -> None:
         raise SystemExit(0 if ok else 1)
     from src.workflows import monitor_loop
 
-    monitor_loop.run(settings, debug=args.debug, root=ROOT)
+    if args.debug:
+        monitor_loop.run(settings, debug=True, root=ROOT)
+    else:
+        monitor_loop.run_headless(settings, root=ROOT)
 
 
 if __name__ == "__main__":
