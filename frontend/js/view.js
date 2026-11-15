@@ -13,6 +13,7 @@ const NOTES = {
   "no person": "No one in view",
   "low visibility": "Move so your ears and shoulders are in view",
   "not calibrated": "Calibrate to start scoring",
+  "camera off": "Camera is off",
 };
 
 let threshold = 0.25;
@@ -134,8 +135,19 @@ function renderFeatures(f) {
   set("f-head", `${f.head_tilt.toFixed(1)}°`, Math.abs(f.head_tilt) > 10);
 }
 
+/** Reset the readout to "Away" when the camera is stopped. */
+export function showCameraOff() {
+  renderFrame({
+    state: "away", score: null, slouch_seconds: 0, features: null, note: "camera off",
+    alerts_today: Number($("alerts-today").textContent) || 0,
+  });
+}
+
+let bannerTimer = null;
+
 export function renderCalibration(cal) {
   const banner = $("calibration-banner");
+  clearTimeout(bannerTimer); // a new status replaces any pending auto-hide
   if (!cal || cal.phase === "cancelled") {
     banner.hidden = true;
     return;
@@ -148,7 +160,7 @@ export function renderCalibration(cal) {
     banner.textContent = `Recording your upright posture: ${cal.seconds_left.toFixed(0)} s left, hold still.`;
   } else {
     banner.textContent = cal.message;
-    setTimeout(() => (banner.hidden = true), 5000);
+    bannerTimer = setTimeout(() => (banner.hidden = true), 5000);
   }
 }
 

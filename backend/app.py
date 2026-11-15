@@ -7,6 +7,7 @@ src/engine) -> this file (HTTP/WebSocket and I/O: baseline file, SQLite log).
 """
 from __future__ import annotations
 
+import json
 import logging
 import time
 from dataclasses import dataclass
@@ -144,7 +145,18 @@ def create_app(
                             "alerts_today": alerts_today})
         try:
             while True:
-                raw = await ws.receive_json()
+                incoming = await ws.receive()
+                if incoming["type"] == "websocket.disconnect":
+                    raise WebSocketDisconnect(incoming.get("code", 1000))
+                text = incoming.get("text")
+                if text is None:
+                    await error("Send JSON text messages")
+                    continue
+                try:
+                    raw = json.loads(text)
+                except ValueError:
+                    await error("Message is not valid JSON")
+                    continue
                 try:
                     msg = client_message.validate_python(raw)
                 except ValidationError as e:

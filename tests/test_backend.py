@@ -196,3 +196,17 @@ def test_foreign_host_header_is_refused(web):
     client, _, _ = web
     assert client.get("/api/stats", headers={"host": "evil.example:8000"}).status_code == 400
     assert client.get("/api/stats").status_code == 200
+
+
+def test_malformed_messages_get_an_error_and_keep_the_socket_open(web):
+    client, _, _ = web
+    with client.websocket_connect("/ws") as ws:
+        ws.receive_json()
+        ws.send_text("{not json")
+        assert ws.receive_json() == {"type": "error", "message": "Message is not valid JSON"}
+        ws.send_bytes(b"\x00\x01")
+        assert ws.receive_json()["message"] == "Send JSON text messages"
+        ws.send_json([1, 2, 3])
+        assert ws.receive_json()["type"] == "error"
+        ws.send_json({"type": "frame", "landmarks": None})  # still works afterwards
+        assert ws.receive_json()["type"] == "frame"

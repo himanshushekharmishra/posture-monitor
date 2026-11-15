@@ -53,8 +53,13 @@ Each problem below was reproduced first, then fixed with a test that covers it.
 
 | Problem | Fix | Commit |
 |---|---|---|
-| Any website you visit could open a WebSocket to the local server (WebSockets ignore CORS) and, for example, overwrite your calibration | `/ws` only accepts browser connections whose Origin is the server itself | see git log |
-| DNS rebinding: a site resolving its own name to 127.0.0.1 could read `/api/*` | requests must be addressed to an allowed host (`web_allowed_hosts`) | see git log |
+| Any website you visit could open a WebSocket to the local server (WebSockets ignore CORS) and, for example, overwrite your calibration | `/ws` only accepts browser connections whose Origin is the server itself | `3d0aa00` |
+| DNS rebinding: a site resolving its own name to 127.0.0.1 could read `/api/*` | requests must be addressed to an allowed host (`web_allowed_hosts`) | `3d0aa00` |
+| One malformed or binary WebSocket message crashed the connection handler | it gets an error reply and the socket stays open | this commit |
+| Web page: after a reconnect it could stay on "Cancel calibration" or show an alert the server no longer knows | a new connection resets calibration and alert state | this commit |
+| Web page: stopping the camera left the last state (e.g. "Slouching") on screen and an unfinished calibration running | the readout resets to "Camera is off" and calibration is cancelled | this commit |
+| Web page: browser notifications throw on Android Chrome | caught; the in-page alert still shows | this commit |
+| Web page: an old auto-hide timer could hide a newly started calibration's banner | the timer is cleared on each update | this commit |
 
 ## What has been checked
 

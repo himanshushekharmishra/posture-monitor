@@ -47,7 +47,12 @@ async function loadBaseline() {
 function onMessage(msg) {
   switch (msg.type) {
     case "hello":
+      // A (re)connection starts a fresh server session: drop any state from the old one.
       app.calibrated = msg.calibrated;
+      app.calibrating = false;
+      app.alertPending = false;
+      view.renderCalibration(null);
+      view.hideAlert();
       if (msg.calibrated) loadBaseline();
       refreshButtons();
       break;
@@ -66,6 +71,10 @@ function onMessage(msg) {
       break;
     case "error":
       console.warn("Server:", msg.message);
+      if (msg.message === "No alert to label yet") {
+        app.alertPending = false; // the server no longer knows that alert
+        view.hideAlert();
+      }
       break;
   }
 }
@@ -97,7 +106,12 @@ function handleFrame(msg) {
 function notify(alert) {
   if (!("Notification" in window) || Notification.permission !== "granted") return;
   if (document.visibilityState === "visible" && document.hasFocus()) return; // page shows it
-  new Notification(alert.title, { body: alert.message, tag: "posture" });
+  try {
+    new Notification(alert.title, { body: alert.message, tag: "posture" });
+  } catch (err) {
+    // Android Chrome only allows notifications from a service worker; the page banner still shows.
+    console.warn("Notification not shown:", err);
+  }
 }
 
 const socket = new PostureSocket(onMessage, (status) => {
@@ -152,11 +166,13 @@ async function startCamera() {
 
 function stopCamera() {
   ticker.postMessage(0);
+  if (app.calibrating) socket.send({ type: "cancel_calibration" }); // it needs frames to finish
   app.stream?.getTracks().forEach((t) => t.stop());
   app.stream = null;
   video.srcObject = null;
   clearSkeleton(overlay);
   view.setCameraOn(false);
+  view.showCameraOff(); // don't leave the last posture state on screen
   view.setHint("Camera off.");
 }
 
