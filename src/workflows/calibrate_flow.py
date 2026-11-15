@@ -83,7 +83,12 @@ def run(settings: dict, root: Path | None = None, show_window: bool = True) -> B
             "ears and shoulders are visible and well lit, then try again."
         )
         return None
-    baseline = build_baseline(samples, datetime.now(timezone.utc).isoformat(timespec="seconds"))
+    try:
+        baseline = build_baseline(
+            samples, datetime.now(timezone.utc).isoformat(timespec="seconds"))
+    except ValueError as e:
+        print(f"Calibration failed: {e}.")
+        return None
     save_baseline(baseline, baseline_path)
     print(
         f"Saved baseline from {len(samples)} frames to {baseline_path}: "

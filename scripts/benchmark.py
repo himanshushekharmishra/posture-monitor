@@ -31,7 +31,7 @@ import psutil  # noqa: E402
 
 from src.engine.features import deviation_score, extract_features  # noqa: E402
 from src.engine.state import Ema, PostureStateMachine  # noqa: E402
-from src.main import read_settings  # noqa: E402
+from src.main import SettingsError, read_settings  # noqa: E402
 from src.schemas.models import Baseline  # noqa: E402
 from src.tools.capture import open_source  # noqa: E402
 from src.tools.pose import PoseEstimator, silence_native_logs  # noqa: E402
@@ -267,7 +267,10 @@ def render_markdown(
 
 
 def main() -> None:
-    settings, applied = read_settings()
+    try:
+        settings, applied = read_settings()
+    except SettingsError as e:
+        raise SystemExit(str(e)) from None
     if applied:
         print(f"Settings overridden: {', '.join(applied)}")
     if settings["quiet_native_logs"]:

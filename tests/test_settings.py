@@ -19,3 +19,37 @@ def test_all_settings_keys_exist():
 def test_weights_sum_to_one():
     settings = json.loads((ROOT / "config" / "settings.json").read_text())
     assert abs(sum(settings["weights"].values()) - 1.0) < 1e-9
+
+
+def test_shipped_settings_are_valid():
+    from src.utils.validate import settings_problems
+
+    settings = json.loads((ROOT / "config" / "settings.json").read_text())
+    assert settings_problems(settings) == []
+
+
+def test_bad_settings_are_all_reported():
+    from src.utils.validate import settings_problems
+
+    s = json.loads((ROOT / "config" / "settings.json").read_text())
+    s.update(process_fps=0, ema_alpha=5, min_visibility=1.5, camera_index=0.5,
+             recovery_margin=0.3, web_port=70000)
+    s["weights"] = {"neck": 0, "lean": 0, "shoulder_tilt": 0, "head_tilt": 0}
+    del s["persist_seconds"]
+    text = "\n".join(settings_problems(s))
+    for key in ("process_fps", "ema_alpha", "min_visibility", "camera_index",
+                "recovery_margin", "web_port", "weights", "persist_seconds is missing"):
+        assert key in text
+
+
+def test_read_settings_rejects_bad_override(monkeypatch):
+    import pytest
+
+    from src.main import SettingsError, read_settings
+
+    monkeypatch.setenv("PROCESS_FPS", "0")
+    with pytest.raises(SettingsError, match="process_fps"):
+        read_settings()
+    monkeypatch.setenv("PROCESS_FPS", "fast")
+    with pytest.raises(SettingsError, match="PROCESS_FPS"):
+        read_settings()

@@ -102,3 +102,32 @@ def test_baseline_uses_median_and_round_trips():
 def test_build_baseline_rejects_empty():
     with pytest.raises(ValueError):
         build_baseline([], "t")
+
+
+def test_bad_baselines_are_rejected():
+    from src.engine.calibration import baseline_from_dict
+
+    good = {"neck_ratio": 0.6, "shoulder_width": 0.3, "shoulder_tilt": 0, "head_tilt": 0,
+            "recorded_at": "t"}
+    assert baseline_from_dict(good).shoulder_width == 0.3
+    for bad in ({"shoulder_width": 0}, {"neck_ratio": -0.1}, {"neck_ratio": float("nan")},
+                {"head_tilt": 120}):
+        with pytest.raises(ValueError):
+            baseline_from_dict({**good, **bad})
+
+
+def test_calibration_with_head_below_shoulders_fails():
+    upside_down = measure(make_pose(ear_y=0.6, shoulder_y=0.5))
+    with pytest.raises(ValueError, match="ears"):
+        build_baseline([upside_down] * 10, "t")
+
+
+def test_unreadable_baseline_file_is_ignored(tmp_path):
+    from src.tools.baseline_store import load_baseline
+
+    p = tmp_path / "baseline.json"
+    p.write_text(json.dumps({"neck_ratio": 0.6, "shoulder_width": 0, "shoulder_tilt": 0,
+                             "head_tilt": 0, "recorded_at": "t"}))
+    assert load_baseline(p) is None
+    p.write_text("{oops")
+    assert load_baseline(p) is None

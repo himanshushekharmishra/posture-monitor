@@ -10,11 +10,14 @@ import sys
 import uvicorn
 
 from backend.app import create_app
-from src.main import LOG_FORMAT, ROOT, log_overrides, read_settings
+from src.main import LOG_FORMAT, ROOT, SettingsError, log_overrides, read_settings
 
 
 def main() -> None:
-    settings, applied = read_settings()
+    try:
+        settings, applied = read_settings()
+    except SettingsError as e:
+        raise SystemExit(str(e)) from None
     p = argparse.ArgumentParser(description="Posture Monitor web app")
     p.add_argument("--host", default=settings["web_host"])
     p.add_argument("--port", type=int, default=settings["web_port"])

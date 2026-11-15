@@ -60,9 +60,11 @@ Each problem below was reproduced first, then fixed with a test that covers it.
 | Web page: stopping the camera left the last state (e.g. "Slouching") on screen and an unfinished calibration running | the readout resets to "Camera is off" and calibration is cancelled | `476e4a0` |
 | Web page: browser notifications throw on Android Chrome | caught; the in-page alert still shows | `476e4a0` |
 | Web page: an old auto-hide timer could hide a newly started calibration's banner | the timer is cleared on each update | `476e4a0` |
-| Tray **Recalibrate** while another app had the camera stopped the whole background app | the error is caught, you get a notification, monitoring continues | this commit |
-| An error while updating the tray icon would stop the monitoring thread | status-listener errors are logged and ignored | this commit |
-| Starting `run.ps1` twice ran two monitors fighting over the camera, with two tray icons | a Windows named mutex allows one instance; the second says "Already running" and exits | this commit |
+| Tray **Recalibrate** while another app had the camera stopped the whole background app | the error is caught, you get a notification, monitoring continues | `37c19d4` |
+| An error while updating the tray icon would stop the monitoring thread | status-listener errors are logged and ignored | `37c19d4` |
+| Starting `run.ps1` twice ran two monitors fighting over the camera, with two tray icons | a Windows named mutex allows one instance; the second says "Already running" and exits | `37c19d4` |
+| A baseline file with shoulder width 0 crashed scoring (division by zero); odd calibrations (ears below shoulders) were accepted | baselines are checked on load and when built; a bad file is ignored, a bad calibration fails with a reason | this commit |
+| Nonsense settings (e.g. `PROCESS_FPS=0`, `EMA_ALPHA=5`) failed later, far from the cause | all settings are checked at start-up and every problem is listed; in background mode it's shown as a notification | this commit |
 
 ## What has been checked
 

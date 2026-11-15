@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 from src.utils.env import apply_overrides, parse_env
+from src.utils.validate import settings_problems
 
 ROOT = Path(__file__).resolve().parent.parent
 SETTINGS_PATH = ROOT / "config" / "settings.json"
@@ -32,16 +33,34 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
+class SettingsError(ValueError):
+    """The settings can't be used; the message says what to fix."""
+
+
 def read_settings(path: Path = SETTINGS_PATH, overrides: bool = True) -> tuple[dict, list[str]]:
     """settings.json, then .env in the project root, then environment variables.
-    Returns (settings, names of the overridden settings)."""
-    with path.open(encoding="utf-8") as f:
-        settings = json.load(f)
-    if not overrides:
-        return settings, []
-    env_file = ROOT / ".env"
-    file_vars = parse_env(env_file.read_text(encoding="utf-8")) if env_file.is_file() else {}
-    return apply_overrides(settings, file_vars, os.environ)
+    Returns (settings, names of the overridden settings). Raises SettingsError if the
+    file can't be parsed or any value is out of range."""
+    try:
+        with path.open(encoding="utf-8") as f:
+            settings = json.load(f)
+    except ValueError as e:
+        raise SettingsError(f"{path} is not valid JSON: {e}") from e
+    applied: list[str] = []
+    if overrides:
+        env_file = ROOT / ".env"
+        file_vars = parse_env(env_file.read_text(encoding="utf-8")) if env_file.is_file() else {}
+        try:
+            settings, applied = apply_overrides(settings, file_vars, os.environ)
+        except ValueError as e:
+            raise SettingsError(str(e)) from e
+    problems = settings_problems(settings)
+    if problems:
+        raise SettingsError(
+            "Invalid settings:\n  - " + "\n  - ".join(problems)
+            + "\nFix config/settings.json, .env or the matching environment variable."
+        )
+    return settings, applied
 
 
 def log_overrides(applied: list[str]) -> None:
@@ -68,8 +87,15 @@ def setup_logging(settings: dict, to_file: bool) -> None:
 
 def main() -> None:
     args = parse_args()
-    settings, applied = read_settings()
     headless = not (args.debug or args.calibrate or args.video)
+    try:
+        settings, applied = read_settings()
+    except SettingsError as e:
+        if headless:  # no console to print to: say it on screen
+            from src.tools.notifier import notify
+
+            notify("Posture Monitor can't start", str(e)[:250])
+        raise SystemExit(str(e)) from None
     setup_logging(settings, to_file=headless)
     log_overrides(applied)  # after setup_logging, or the message would be dropped
     if settings["quiet_native_logs"]:

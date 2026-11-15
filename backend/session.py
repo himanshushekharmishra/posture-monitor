@@ -104,7 +104,11 @@ class PostureSession:
                 f"Only {len(cal.samples)} good frames (need {self.min_samples}). Make sure "
                 "your ears and shoulders are visible and well lit, then try again.",
             ), None
-        baseline = build_baseline(cal.samples, recorded_at)
+        try:
+            baseline = build_baseline(cal.samples, recorded_at)
+        except ValueError as e:
+            return CalibrationStatus(CalibrationPhase.FAILED, 0, len(cal.samples),
+                                     f"Calibration failed: {e}."), None
         self.set_baseline(baseline)
         return CalibrationStatus(CalibrationPhase.DONE, 0, len(cal.samples),
                                  "Calibrated."), baseline
