@@ -72,6 +72,10 @@ def main() -> None:
     headless = not (args.debug or args.calibrate or args.video)
     setup_logging(settings, to_file=headless)
     log_overrides(applied)  # after setup_logging, or the message would be dropped
+    if settings["quiet_native_logs"]:
+        from src.tools.pose import silence_native_logs
+
+        silence_native_logs()
     if args.calibrate:
         from src.workflows import calibrate_flow
 

@@ -4,6 +4,8 @@ Use mediapipe.tasks.python.vision.PoseLandmarker. Never mp.solutions.
 """
 from __future__ import annotations
 
+import os
+import sys
 from pathlib import Path
 from types import TracebackType
 
@@ -17,6 +19,31 @@ from src.schemas.models import Point
 POSE_CONNECTIONS: list[tuple[int, int]] = [
     (c.start, c.end) for c in vision.PoseLandmarksConnections.POSE_LANDMARKS
 ]
+
+
+def silence_native_logs() -> bool:
+    """Send C/C++ output on stderr (MediaPipe/LiteRT startup logs) to NUL.
+
+    MediaPipe ignores GLOG/TF log-level variables, so this redirects file descriptor
+    2 instead and points Python's sys.stderr at a copy of the original, which keeps
+    Python errors, tracebacks and warnings visible. Native crash messages are hidden
+    too; set QUIET_NATIVE_LOGS=false to see them. Returns False if there is no
+    console (pythonw.exe) or the redirect isn't possible.
+    """
+    if sys.stderr is None:
+        return False
+    try:
+        sys.stderr.flush()
+        saved = os.dup(2)
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, 2)
+        os.close(devnull)
+    except OSError:
+        return False
+    encoding = getattr(sys.stderr, "encoding", None) or "utf-8"
+    sys.stderr = os.fdopen(saved, "w", buffering=1, encoding=encoding,
+                           errors="backslashreplace")
+    return True
 
 
 class PoseEstimator:

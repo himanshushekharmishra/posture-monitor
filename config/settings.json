@@ -22,5 +22,6 @@
   "db_path": "data/output/posture.db",
   "app_log_path": "data/output/app.log",
   "examples_path": "data/examples",
+  "quiet_native_logs": true,
   "baseline_path": "data/output/baseline.json"
 }

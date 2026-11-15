@@ -34,7 +34,7 @@ from src.engine.state import Ema, PostureStateMachine  # noqa: E402
 from src.main import read_settings  # noqa: E402
 from src.schemas.models import Baseline  # noqa: E402
 from src.tools.capture import open_source  # noqa: E402
-from src.tools.pose import PoseEstimator  # noqa: E402
+from src.tools.pose import PoseEstimator, silence_native_logs  # noqa: E402
 from src.utils.timing import FrameThrottle, LatencyStats, LatencyTimer  # noqa: E402
 from src.tools.logger import LabelSummary, SessionLogger  # noqa: E402
 from src.workflows.calibrate_flow import load_baseline  # noqa: E402
@@ -270,6 +270,8 @@ def main() -> None:
     settings, applied = read_settings()
     if applied:
         print(f"Settings overridden: {', '.join(applied)}")
+    if settings["quiet_native_logs"]:
+        silence_native_logs()
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--seconds", type=float, default=30, help="length of each pass")
     ap.add_argument("--warmup", type=float, default=2, help="unrecorded warm-up seconds")
