@@ -17,7 +17,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
-from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Query, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
@@ -25,6 +25,8 @@ from pydantic import ValidationError
 from backend.auth.routes import Auth
 from backend.auth.sms import make_sender
 from backend.auth.store import AuthStore, User, load_or_create_secret
+from backend.history import History
+from backend.insights import build_insights, summarize_session
 from backend.protocol import (
     CalibrateMessage, CancelCalibrationMessage, FrameMessage, LabelMessage,
     calibration_payload, client_message, frame_payload,
@@ -191,6 +193,45 @@ def create_app(
         finally:
             lg.close()
 
+    # ---------- dashboard ----------
+    live_sessions: set[int] = set()  # web sessions with an open socket right now
+
+    def summaries(h: History, rows: list) -> list:
+        evs = h.events([r.id for r in rows])
+        by_session: dict[int, list] = {}
+        for e in evs:
+            by_session.setdefault(e.session_id, []).append(e)
+        now = datetime.now().astimezone()
+        return [summarize_session(r, by_session.get(r.id, []), now, frozenset(live_sessions))
+                for r in rows]
+
+    @app.get("/api/sessions")
+    def list_sessions(request: Request, limit: int = Query(20, ge=1, le=100),
+                      before: int | None = Query(None, ge=1)) -> dict:
+        user = require_user(request)
+        with History(db_path, user.id) as h:
+            rows = h.sessions(limit=limit + 1, before_id=before)
+            page = summaries(h, rows[:limit])
+        return {"sessions": [s.as_dict() for s in page],
+                "next_before": page[-1].id if len(rows) > limit else None}
+
+    @app.get("/api/sessions/{session_id}")
+    def session_detail(session_id: int, request: Request) -> dict:
+        user = require_user(request)
+        with History(db_path, user.id) as h:
+            row = h.session(session_id)
+            if row is None:
+                raise HTTPException(404, "Session not found")
+            return summaries(h, [row])[0].as_dict(with_events=True)
+
+    @app.get("/api/insights")
+    def insights(request: Request, days: int = Query(14, ge=1, le=90)) -> dict:
+        user = require_user(request)
+        with History(db_path, user.id) as h:
+            all_rows = summaries(h, h.sessions())
+            evs = h.events()
+        return build_insights(all_rows, evs, datetime.now().astimezone().date(), days)
+
     @app.get("/model/pose_landmarker.task")
     def model() -> FileResponse:
         """The same pose model the desktop app uses, so the browser needs no download."""
@@ -213,6 +254,7 @@ def create_app(
         await ws.accept()
         logger = SessionLogger(db_path, owner=user.id)
         logger.start_session()
+        live_sessions.add(logger.session_id)
         session = PostureSession(settings, baselines.get(user.id))
         last_alert_id: int | None = None
         label_counts = {"correct": 0, "false_alarm": 0, "missed": 0}
@@ -298,6 +340,7 @@ def create_app(
         finally:
             avg_pose = pose_ms_total / pose_frames if pose_frames else None
             logger.end_session(avg_cpu=None, avg_latency_ms=avg_pose)  # CPU is the browser's
+            live_sessions.discard(logger.session_id)
             logger.close()
             log.info("Web session %s closed", logger.session_id)
 

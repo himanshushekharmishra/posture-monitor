@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import ipaddress
 import logging
+import re
 from datetime import timedelta
 from typing import Literal
 from urllib.parse import quote
@@ -44,6 +45,24 @@ class LoginBody(BaseModel):
 class SignupBody(LoginBody):
     display_name: str | None = Field(default=None, max_length=60)
     guest: bool = False
+
+
+class ProfileBody(BaseModel):
+    display_name: str | None = Field(default=None, max_length=60)
+    email: str | None = Field(default=None, max_length=254)
+
+
+class PasswordChangeBody(BaseModel):
+    current_password: str = Field(max_length=256)
+    new_password: str = Field(max_length=256)
+
+
+class DeleteAccountBody(BaseModel):
+    password: str = Field(max_length=256)
+    confirm_username: str = Field(max_length=64)
+
+
+EMAIL_RE = re.compile(r"^[^@\s]{1,64}@[^@\s]+\.[^@\s]{2,}$")
 
 
 class PhoneSendBody(BaseModel):
@@ -103,6 +122,7 @@ class Auth:
             "trial_days_left": user.trial_days_left(now),
             "trial_expired": user.trial_expired(now),
             "linked": self.store.linked_providers(user.id),
+            "created_at": user.created_at.isoformat() if user.created_at else None,
         }
 
     def _set_cookie(self, response: Response, name: str, value: str, max_age: int) -> None:
@@ -239,6 +259,61 @@ class Auth:
             log.info("New %s account %s", "guest" if user.is_guest else "verified", user.id)
             self._log_in(response, request, user)
             return self.me(user)
+
+        # ---------- account settings ----------
+        def require(request: Request) -> User:
+            user = self.current_user(request)
+            if user is None:
+                raise HTTPException(401, "Log in to continue")
+            return user
+
+        def check_password(request: Request, user: User, password: str) -> None:
+            self._limit(self.login_ip, self._ip(request), "password attempts")
+            if self.store.is_locked(user):
+                raise HTTPException(429, "Too many failed attempts on this account. "
+                                         "Try again in 15 minutes.")
+            if not verify_password(password, user.password_hash):
+                self.store.record_failed_login(user.id)
+                raise HTTPException(403, "Your current password isn't right.")
+
+        @r.post("/api/account/profile")
+        def update_profile(body: ProfileBody, request: Request) -> dict:
+            user = require(request)
+            name = (body.display_name or "").strip() or None
+            email = (body.email or "").strip() or None
+            if email and not EMAIL_RE.fullmatch(email):
+                raise HTTPException(400, "That email address doesn't look right.")
+            self.store.update_profile(user.id, name, email)
+            return self.me(self.store.get_user(user.id))
+
+        @r.post("/api/account/password")
+        def change_password(body: PasswordChangeBody, request: Request,
+                            response: Response) -> dict:
+            user = require(request)
+            check_password(request, user, body.current_password)
+            problem = password_problem(body.new_password, user.username)
+            if problem:
+                raise HTTPException(400, problem)
+            if body.new_password == body.current_password:
+                raise HTTPException(400, "Choose a password you haven't used here before.")
+            self.store.update_password(user.id, hash_password(body.new_password))
+            # Everyone else who had this password is logged out; this device gets a new token.
+            self.store.delete_other_sessions(user.id, None)
+            self._log_in(response, request, self.store.get_user(user.id))
+            log.info("Password changed for account %s", user.id)
+            return {"status": "changed"}
+
+        @r.post("/api/account/delete")
+        def delete_account(body: DeleteAccountBody, request: Request,
+                           response: Response) -> dict:
+            user = require(request)
+            if body.confirm_username.strip().lower() != user.username.lower():
+                raise HTTPException(400, "Type your username exactly to confirm.")
+            check_password(request, user, body.password)
+            self.store.delete_user(user.id)
+            response.delete_cookie(SESSION_COOKIE, path="/")
+            log.info("Account %s deleted", user.id)
+            return {"status": "deleted"}
 
         @r.post("/api/auth/phone/send")
         def phone_send(body: PhoneSendBody, request: Request) -> dict:

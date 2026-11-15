@@ -200,6 +200,37 @@ class AuthStore:
     def is_locked(self, user: User) -> bool:
         return user.locked_until is not None and self.now() < user.locked_until
 
+    def update_profile(self, user_id: int, display_name: str | None, email: str | None) -> None:
+        with self._lock, self._conn:
+            self._conn.execute("UPDATE users SET display_name = ?, email = ? WHERE id = ?",
+                               (display_name, email, user_id))
+
+    def update_password(self, user_id: int, password_hash: str) -> None:
+        with self._lock, self._conn:
+            self._conn.execute("UPDATE users SET password_hash = ? WHERE id = ?",
+                               (password_hash, user_id))
+
+    def delete_other_sessions(self, user_id: int, keep_token: str | None) -> None:
+        """Log out every other device (after a password change)."""
+        keep = _hash_token(keep_token) if keep_token else ""
+        with self._lock, self._conn:
+            self._conn.execute(
+                "DELETE FROM auth_sessions WHERE user_id = ? AND token_hash != ?",
+                (user_id, keep))
+
+    def delete_user(self, user_id: int) -> None:
+        """Remove the account and everything recorded for it."""
+        with self._lock, self._conn:
+            tables = {r[0] for r in self._conn.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'")}
+            if {"sessions", "events", "labels"} <= tables:
+                mine = "SELECT id FROM sessions WHERE user_id = ?"
+                self._conn.execute(f"DELETE FROM labels WHERE session_id IN ({mine})", (user_id,))
+                self._conn.execute(f"DELETE FROM events WHERE session_id IN ({mine})", (user_id,))
+                self._conn.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
+            # identities, login sessions and calibration go with the user (ON DELETE CASCADE)
+            self._conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+
     def end_guest_trial(self, user_id: int) -> None:
         """A guest who links a verified identity becomes a regular account."""
         with self._lock, self._conn:

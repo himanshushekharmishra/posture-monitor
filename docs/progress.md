@@ -12,7 +12,7 @@ Last updated: 2026-11-15, on `main`, after the code review fixes.
 | Desktop app (5 build phases) | done |
 | Web app (`backend/` + `frontend/`) | done, with accounts; live webcam in the page not yet tried by a person |
 | Code review | done: 16 problems found and fixed (table below) |
-| Tests | 112 passing (`pytest -q`) |
+| Tests | 120 passing (`pytest -q`) |
 | Benchmarks | measured, but only with nobody in frame |
 | Alert precision | not measured yet (needs a 30-minute labelled session) |
 
@@ -85,7 +85,8 @@ previous sessions, a slouch meter and settings.
 |---|---|---|
 | Backend: accounts, sessions, phone codes, Google/GitHub OAuth, per-account data | done | `5648b07` |
 | Login and sign-up page; app page shows the account, log out, guest trial days | done | this commit |
-| Dashboard (profile, previous sessions, slouch meter, settings) | next | |
+| Dashboard backend: session history, slouch insights, profile edit, password change, delete account | done | this commit |
+| Dashboard pages: side menu, profile, previous sessions, slouch meter, settings | next | |
 
 Security built in: scrypt password hashes; session cookies that are HttpOnly,
 SameSite=Lax and Secure on https, stored only as hashes; lockout after 8 wrong
