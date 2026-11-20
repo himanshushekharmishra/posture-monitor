@@ -4,11 +4,14 @@ import { api } from "./api.js";
 import { PostureSocket } from "./connection.js";
 import { createPoseDetector } from "./pose.js";
 import { clearSkeleton, drawSkeleton } from "./skeleton.js";
+import { createVoxelBody } from "./voxelbody.js";
 import * as view from "./view.js";
 
 const video = document.getElementById("video");
 const overlay = document.getElementById("overlay");
+const styleBtn = document.getElementById("style-btn");
 const MODEL_URL = "/model/pose_landmarker.task";
+const STYLE_KEY = "posture.viewStyle";
 
 const app = {
   config: null,
@@ -18,7 +21,38 @@ const app = {
   calibrating: false,
   alertPending: false,
   stateColor: "#7f8d95",
+  voxels: createVoxelBody(document.getElementById("voxels")), // null without WebGL2
+  style: readStyle(),
 };
+
+// ---------- view style: 3D voxel body or 2D lines ----------
+function readStyle() {
+  try {
+    return localStorage.getItem(STYLE_KEY) === "lines" ? "lines" : "voxels";
+  } catch {
+    return "voxels"; // storage blocked (private window, site data off)
+  }
+}
+
+function voxelsOn() {
+  return app.style === "voxels" && Boolean(app.voxels?.available);
+}
+
+function renderStyleButton() {
+  styleBtn.hidden = !app.voxels?.available;
+  styleBtn.textContent = voxelsOn() ? "Show lines" : "Show 3D body";
+}
+
+function applyStyle() {
+  renderStyleButton();
+  if (!app.stream) return;
+  if (voxelsOn()) {
+    clearSkeleton(overlay);
+    app.voxels.start();
+  } else {
+    app.voxels?.stop();
+  }
+}
 
 function refreshButtons() {
   const online = socket.isOpen;
@@ -84,6 +118,7 @@ function handleFrame(msg) {
   view.renderFrame(msg);
   app.stateColor = getComputedStyle(document.getElementById("readout"))
     .getPropertyValue("--state").trim() || app.stateColor;
+  app.voxels?.setPosture(msg.state, msg.slouch_seconds, app.config.persist_seconds, app.stateColor);
 
   if (msg.calibration) {
     const phase = msg.calibration.phase;
@@ -140,7 +175,12 @@ ticker.onmessage = tick;
 function tick() {
   if (!app.stream || video.readyState < 2) return;
   const { landmarks, ms } = app.detector.detect(video);
-  drawSkeleton(overlay, video, landmarks, app.config.min_visibility, app.stateColor);
+  if (voxelsOn()) {
+    app.voxels.setPose(landmarks, video.videoWidth, video.videoHeight, app.config.min_visibility);
+  } else {
+    if (app.voxels && !app.voxels.available) renderStyleButton(); // GPU context was lost
+    drawSkeleton(overlay, video, landmarks, app.config.min_visibility, app.stateColor);
+  }
   socket.send({
     type: "frame",
     landmarks: landmarks && landmarks.map((p) => [p.x, p.y, p.visibility ?? 1]),
@@ -185,6 +225,7 @@ async function startCamera() {
     ? "Watching your posture. You can switch to another tab; alerts still arrive."
     : "Sit upright and press Calibrate so the app learns your good posture.");
   ticker.postMessage(1000 / app.config.process_fps);
+  applyStyle();
 }
 
 function stopCamera() {
@@ -194,6 +235,7 @@ function stopCamera() {
   app.stream = null;
   video.srcObject = null;
   clearSkeleton(overlay);
+  app.voxels?.stop();
   view.setCameraOn(false);
   view.showCameraOff(); // don't leave the last posture state on screen
   view.setHint("Camera off.");
@@ -208,6 +250,16 @@ document.getElementById("camera-btn").addEventListener("click", () => {
 
 document.getElementById("calibrate-btn").addEventListener("click", () => {
   socket.send({ type: app.calibrating ? "cancel_calibration" : "calibrate" });
+});
+
+styleBtn.addEventListener("click", () => {
+  app.style = voxelsOn() ? "lines" : "voxels";
+  try {
+    localStorage.setItem(STYLE_KEY, app.style);
+  } catch {
+    /* not remembered; still switches */
+  }
+  applyStyle();
 });
 
 document.getElementById("notify-btn").addEventListener("click", async () => {
@@ -281,6 +333,7 @@ async function init() {
     return;
   }
   view.setHint(`Pose model ready (${app.detector.delegate}). Start the camera when you're at your desk.`);
+  renderStyleButton();
   refreshButtons();
   refreshStats();
   setInterval(refreshStats, 60_000);

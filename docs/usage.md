@@ -15,7 +15,11 @@
      `guest_trial_days` (14). Connect Google, GitHub or a phone before it ends to
      keep the account; after that you'll be asked to.
 3. **Start camera** and allow camera access. The pose model runs in the page; only
-   33 body points per frame are sent to the server, never the video.
+   33 body points per frame are sent to the server, never the video. Your pose shows
+   as a 3D voxel body: the neck and ear-to-shoulder bands (what the score uses) glow
+   in the posture colour, cracks open while you slouch, an alert shatters it, and it
+   reassembles when you sit up. **Show lines** switches to the simple skeleton (the
+   page remembers your choice); browsers without WebGL2 always get the skeleton.
 4. Sit upright and press **Calibrate** (3 s countdown, 5 s recording). Each account
    has its own calibration and history. The desktop app keeps its own.
 5. **Turn on notifications** to get alerts while the tab is in the background.
