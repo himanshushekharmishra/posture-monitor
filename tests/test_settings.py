@@ -34,12 +34,13 @@ def test_bad_settings_are_all_reported():
 
     s = json.loads((ROOT / "config" / "settings.json").read_text())
     s.update(process_fps=0, ema_alpha=5, min_visibility=1.5, camera_index=0.5,
-             recovery_margin=0.3, web_port=70000)
+             recovery_margin=0.3, web_port=70000, calibration_max_tilt_degrees=-1)
     s["weights"] = {"neck": 0, "lean": 0, "shoulder_tilt": 0, "head_tilt": 0}
     del s["persist_seconds"]
     text = "\n".join(settings_problems(s))
     for key in ("process_fps", "ema_alpha", "min_visibility", "camera_index",
-                "recovery_margin", "web_port", "weights", "persist_seconds is missing"):
+                "recovery_margin", "web_port", "calibration_max_tilt_degrees", "weights",
+                "persist_seconds is missing"):
         assert key in text
 
 

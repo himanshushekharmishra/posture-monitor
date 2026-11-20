@@ -122,6 +122,17 @@ def test_calibration_with_head_below_shoulders_fails():
         build_baseline([upside_down] * 10, "t")
 
 
+def test_tilted_baseline_gets_a_warning():
+    from src.engine.calibration import tilt_warning
+
+    max_tilt = SETTINGS["calibration_max_tilt_degrees"]
+    assert tilt_warning(baseline_for(make_pose()), max_tilt) == ""
+    # 0.06 drop over a 0.3 shoulder width is about 11 degrees
+    tilted = baseline_for(make_pose(right_shoulder_dy=0.06))
+    warning = tilt_warning(tilted, max_tilt)
+    assert "shoulders 11 degrees" in warning and "head" not in warning
+
+
 def test_unreadable_baseline_file_is_ignored(tmp_path):
     from src.tools.baseline_store import load_baseline
 

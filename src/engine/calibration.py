@@ -28,6 +28,22 @@ def check_baseline(b: Baseline) -> Baseline:
     return b
 
 
+def tilt_warning(b: Baseline, max_tilt_degrees: float) -> str:
+    """A hint to recalibrate when the baseline is tilted, or "" if it's level enough.
+
+    Tilt is scored against the baseline, so a crooked baseline makes sitting straight
+    later look like a deviation. Only a warning, not an error: with the camera off to
+    one side, a tilted baseline can be right for that desk.
+    """
+    tilted = [f"{name} {abs(v):.0f} degrees"
+              for name, v in (("shoulders", b.shoulder_tilt), ("head", b.head_tilt))
+              if abs(v) > max_tilt_degrees]
+    if not tilted:
+        return ""
+    return (f"Your baseline is tilted ({', '.join(tilted)}). If you weren't sitting level, "
+            "recalibrate; if the camera is off to one side, this is fine.")
+
+
 def build_baseline(samples: list[PostureSample], recorded_at: str) -> Baseline:
     """Median of each measurement, so a few bad frames don't skew the baseline."""
     if not samples:

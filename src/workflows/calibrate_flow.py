@@ -8,7 +8,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from src.engine.calibration import build_baseline
+from src.engine.calibration import build_baseline, tilt_warning
 from src.engine.features import measure
 from src.schemas.models import Baseline, PostureSample
 from src.tools.baseline_store import load_baseline, save_baseline  # noqa: F401 (re-export)
@@ -95,4 +95,7 @@ def run(settings: dict, root: Path | None = None, show_window: bool = True) -> B
         f"neck_ratio={baseline.neck_ratio:.3f} shoulder_width={baseline.shoulder_width:.3f} "
         f"shoulder_tilt={baseline.shoulder_tilt:.1f} head_tilt={baseline.head_tilt:.1f}"
     )
+    warning = tilt_warning(baseline, float(settings["calibration_max_tilt_degrees"]))
+    if warning:
+        print(warning)
     return baseline

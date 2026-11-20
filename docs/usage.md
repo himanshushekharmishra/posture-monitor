@@ -1,7 +1,9 @@
 # Usage
 
 1. `scripts\setup.ps1`
-2. `python -m src.main --calibrate` (sit upright; 3 s countdown, then 5 s recording)
+2. `python -m src.main --calibrate` (sit upright; 3 s countdown, then 5 s recording).
+   If your shoulders or head come out tilted more than `calibration_max_tilt_degrees`
+   (8), you get a warning: recalibrate sitting level, unless the camera is off to one side.
 3. `scripts\run.ps1` to run in the background (tray icon, no console window)
 
 ## Web app

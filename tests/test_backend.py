@@ -68,6 +68,27 @@ def test_session_alerts_on_sustained_slouch():
     assert r[0].features["neck_ratio"] < s.baseline.neck_ratio  # head dropped
 
 
+def test_session_warns_about_a_tilted_calibration():
+    from dataclasses import replace
+    from math import tan, radians
+
+    from src.engine.features import L_SHOULDER, R_SHOULDER
+
+    pts = list(UPRIGHT["points"])
+    width = abs(pts[L_SHOULDER].x - pts[R_SHOULDER].x)
+    pts[R_SHOULDER] = replace(pts[R_SHOULDER], y=pts[R_SHOULDER].y + width * tan(radians(15)))
+    s = PostureSession(SETTINGS, baseline=None)
+    s.start_calibration(0)
+    r, _ = feed(s, pts, 0, CAL_SECONDS + 1)
+    done = [x.calibration for x in r if x.new_baseline is not None]
+    assert len(done) == 1 and done[0].phase == CalibrationPhase.DONE
+    assert done[0].message.startswith("Calibrated. ") and "shoulders" in done[0].message
+
+    s.start_calibration(100)  # level again: just "Calibrated."
+    r, _ = feed(s, UPRIGHT["points"], 100, CAL_SECONDS + 1)
+    assert [x.calibration.message for x in r if x.new_baseline is not None] == ["Calibrated."]
+
+
 def test_calibration_fails_without_a_person():
     s = PostureSession(SETTINGS, baseline=None)
     s.start_calibration(0)

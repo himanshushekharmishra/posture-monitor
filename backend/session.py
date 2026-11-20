@@ -11,7 +11,7 @@ import math
 from dataclasses import dataclass, field
 from enum import Enum
 
-from src.engine.calibration import build_baseline
+from src.engine.calibration import build_baseline, tilt_warning
 from src.engine.features import deviation_score, extract_features, measure
 from src.engine.state import Ema, PostureStateMachine
 from src.schemas.models import Baseline, Point, PostureSample, PostureState
@@ -110,8 +110,9 @@ class PostureSession:
             return CalibrationStatus(CalibrationPhase.FAILED, 0, len(cal.samples),
                                      f"Calibration failed: {e}."), None
         self.set_baseline(baseline)
+        warning = tilt_warning(baseline, float(self.settings["calibration_max_tilt_degrees"]))
         return CalibrationStatus(CalibrationPhase.DONE, 0, len(cal.samples),
-                                 "Calibrated."), baseline
+                                 f"Calibrated. {warning}".strip()), baseline
 
     def handle_frame(
         self, landmarks: list[Point] | None, now: float, recorded_at: str = ""

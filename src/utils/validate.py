@@ -10,7 +10,8 @@ import math
 
 POSITIVE = (
     "process_fps", "frame_width", "frame_height", "calibration_seconds",
-    "calibration_min_samples", "tilt_norm_degrees", "slouch_threshold", "persist_seconds",
+    "calibration_min_samples", "calibration_max_tilt_degrees", "tilt_norm_degrees",
+    "slouch_threshold", "persist_seconds",
     "away_timeout_seconds", "notification_timeout_seconds", "camera_retry_seconds",
 )
 NON_NEGATIVE = ("camera_index", "calibration_countdown_seconds", "cooldown_minutes",

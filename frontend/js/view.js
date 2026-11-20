@@ -166,7 +166,9 @@ export function renderCalibration(cal) {
     banner.textContent = `Recording your upright posture: ${cal.seconds_left.toFixed(0)} s left, hold still.`;
   } else {
     banner.textContent = cal.message;
-    bannerTimer = setTimeout(() => (banner.hidden = true), 5000);
+    // A plain "Calibrated." can go quickly; a tilt warning needs time to read.
+    const showMs = cal.message === "Calibrated." ? 5000 : 15000;
+    bannerTimer = setTimeout(() => (banner.hidden = true), showMs);
   }
 }
 

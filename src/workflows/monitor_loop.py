@@ -13,6 +13,7 @@ import cv2
 import numpy as np
 import psutil
 
+from src.engine.calibration import tilt_warning
 from src.engine.features import deviation_score, extract_features
 from src.engine.state import Ema, PostureStateMachine
 from src.schemas.models import Baseline, MonitorStatus, Point, PostureState
@@ -98,7 +99,12 @@ class MonitorControl:
 def _recalibrate(settings: dict, root: Path, tray: bool) -> Baseline | None:
     """Run calibration; on failure (e.g. camera in use) log, tell the user, carry on."""
     try:
-        return calibrate_flow.run(settings, root=root)
+        baseline = calibrate_flow.run(settings, root=root)
+        if baseline and tray:  # no console in the background, so say it as a notification
+            warning = tilt_warning(baseline, float(settings["calibration_max_tilt_degrees"]))
+            if warning:
+                notify("Posture Monitor", warning)
+        return baseline
     except (RuntimeError, OSError) as e:
         log.warning("Calibration failed: %s", e)
         if tray:

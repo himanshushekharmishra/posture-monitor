@@ -3,7 +3,7 @@
 Where the project stands, what has been checked, and what is left. Update this file
 with every change (see the rule in `CLAUDE.md`).
 
-Last updated: 2026-11-20, on `main`, after merging the `setup.ps1` fix and trimming `CLAUDE.md`.
+Last updated: 2026-11-20, on `main`, after adding the tilted-calibration warning.
 
 ## Status at a glance
 
@@ -12,7 +12,7 @@ Last updated: 2026-11-20, on `main`, after merging the `setup.ps1` fix and trimm
 | Desktop app (5 build phases) | done |
 | Web app (`backend/` + `frontend/`) | done, with accounts; live webcam in the page not yet tried by a person |
 | Code review | done: 16 problems found and fixed (table below) |
-| Tests | 122 passing (`pytest -q`) |
+| Tests | 124 passing (`pytest -q`) |
 | Benchmarks | measured, but only with nobody in frame |
 | Alert precision | not measured yet (needs a 30-minute labelled session) |
 
@@ -50,7 +50,8 @@ Each phase is one commit, so the history shows how the app was built up.
 | README pictures: pipeline and posture diagrams, web app screenshots (light and dark), state machine | `26da4d5`, `27bfa01` |
 | `scripts/make_demo_data.py` and steps for retaking the README screenshots | `04ef5e9` |
 | `setup.ps1` really uses `py -3.12`/`-3.11`: on Windows PowerShell 5.1 the version flag was dropped, so it checked the default Python and fell back to uv; `.claude/launch.json` to start the web app from Claude Code | `6f29b08` |
-| `CLAUDE.md` trimmed to goal, commands and rules; folder map, pipeline, features, state machine and phase list now live only in `docs/architecture.md` and this file | this commit |
+| `CLAUDE.md` trimmed to goal, commands and rules; folder map, pipeline, features, state machine and phase list now live only in `docs/architecture.md` and this file | `e2d6a57` |
+| Warning when a calibration comes out tilted (over `calibration_max_tilt_degrees`, 8): tilt is scored against the baseline, so a crooked one pushes level sitting toward an alert. Shown in the console, as a tray notification and in the web page's banner | this commit |
 
 ## Fixes from the code review (2026-11-15)
 
@@ -172,6 +173,8 @@ likely the camera privacy key or switch is on. Not something the app can fix.
 
 Needs you:
 1. Calibrate: `python -m src.main --calibrate` (or **Calibrate** in the web page).
+   The baseline saved on 2026-11-20 has the shoulders tilted 13 degrees, so redo it
+   sitting level.
 2. Try the web page with your webcam in Chrome or Edge (`python -m backend`).
    The built-in test browser blocks cameras, so this hasn't been tried yet.
 3. Let a real slouch alert fire, and try `scripts\run.ps1` with Recalibrate from the tray.
