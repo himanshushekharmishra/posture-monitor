@@ -3,7 +3,7 @@
 Where the project stands, what has been checked, and what is left. Update this file
 with every change (see the rule in `CLAUDE.md`).
 
-Last updated: 2026-11-20, on `main`, after adding the GitHub test workflow.
+Last updated: 2026-11-20, on `main`, after adding the MIT license.
 
 ## Status at a glance
 
@@ -54,7 +54,8 @@ Each phase is one commit, so the history shows how the app was built up.
 | Warning when a calibration comes out tilted (over `calibration_max_tilt_degrees`, 8): tilt is scored against the baseline, so a crooked one pushes level sitting toward an alert. Shown in the console, as a tray notification and in the web page's banner | `d39dcd4` |
 | `requirements.txt` pins the exact versions the tests pass with (MediaPipe 1.2.3, NumPy 2.5.5, FastAPI 0.165.0, ...), so every laptop installs the same set | `7c2996a` |
 | Known limits and `backend/__main__.py` no longer say the web server has no login (accounts were added); the reason to stay on `127.0.0.1` is plain HTTP | `ec2cb9f` |
-| GitHub Actions runs `pytest -q` on Windows with Python 3.12 on every push and pull request (`.github/workflows/tests.yml`); no camera or model needed | this commit |
+| GitHub Actions runs `pytest -q` on Windows with Python 3.12 on every push and pull request (`.github/workflows/tests.yml`); no camera or model needed | `f4aa14d` |
+| MIT `LICENSE` and a License section in the README, now that a copy of the repo is public | this commit |
 
 ## Fixes from the code review (2026-11-15)
 

@@ -127,3 +127,7 @@ checked and what's left: [docs/progress.md](docs/progress.md).
 About 0.5% CPU and 12 ms per frame at 5 FPS on a Ryzen 7 5800H, measured so far
 with nobody in frame, so expect somewhat more while it tracks you. Full numbers and
 method: [docs/benchmarks.md](docs/benchmarks.md).
+
+## License
+MIT, see [LICENSE](LICENSE). The MediaPipe pose model that `setup.ps1` downloads is
+Google's and comes under its own terms (Apache 2.0).
