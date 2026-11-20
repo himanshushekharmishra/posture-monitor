@@ -4,6 +4,7 @@ import { api } from "./api.js";
 import { PostureSocket } from "./connection.js";
 import { createFaceDetector, createPoseDetector } from "./pose.js";
 import { createHologram } from "./hologram.js";
+import { createSoundPlayer, soundFor } from "./sounds.js";
 import { clearSkeleton, drawSkeleton } from "./skeleton.js";
 import * as view from "./view.js";
 
@@ -13,6 +14,7 @@ const styleBtn = document.getElementById("style-btn");
 const MODEL_URL = "/model/pose_landmarker.task";
 const FACE_MODEL_URL = "/model/face_landmarker.task";
 const STYLE_KEY = "posture.viewStyle";
+const SOUND_KEY = "posture.sounds";
 
 const app = {
   config: null,
@@ -29,6 +31,8 @@ const app = {
   },
   style: readStyle(),
   lastSeen: 0, // performance.now() when a person was last in view
+  sounds: createSoundPlayer(),
+  soundBand: -1, // highest slouch-meter range already played in this slouch
   dismissed: false,
 };
 
@@ -139,6 +143,10 @@ function handleFrame(msg) {
   for (const renderer of Object.values(app.renderers)) {
     renderer?.setPosture(msg.state, msg.slouch_seconds, app.config.persist_seconds, app.stateColor);
   }
+  const [sound, band] = soundFor(msg, app.config.slouch_threshold, app.config.web_sound_bands,
+    app.soundBand);
+  app.soundBand = band;
+  if (sound) app.sounds.play(sound);
 
   if (msg.calibration) {
     const phase = msg.calibration.phase;
@@ -291,6 +299,7 @@ function stopCamera() {
 
 // ---------- buttons ----------
 document.getElementById("camera-btn").addEventListener("click", () => {
+  if (app.config) app.sounds.unlock(app.config); // audio needs a click to start
   if (app.stream) stopCamera();
   else startCamera().then(refreshButtons);
   refreshButtons();
@@ -298,6 +307,35 @@ document.getElementById("camera-btn").addEventListener("click", () => {
 
 document.getElementById("calibrate-btn").addEventListener("click", () => {
   socket.send({ type: app.calibrating ? "cancel_calibration" : "calibrate" });
+});
+
+// ---------- sounds on/off ----------
+function readSoundsOn() {
+  try {
+    return localStorage.getItem(SOUND_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+
+function renderSoundButton() {
+  const btn = document.getElementById("sound-btn");
+  btn.textContent = app.sounds.enabled ? "Sounds: on" : "Sounds: off";
+  btn.setAttribute("aria-pressed", String(app.sounds.enabled));
+}
+
+app.sounds.enabled = readSoundsOn();
+renderSoundButton();
+
+document.getElementById("sound-btn").addEventListener("click", () => {
+  app.sounds.enabled = !app.sounds.enabled;
+  if (app.config) app.sounds.unlock(app.config);
+  try {
+    localStorage.setItem(SOUND_KEY, app.sounds.enabled ? "on" : "off");
+  } catch {
+    /* not remembered; still switches */
+  }
+  renderSoundButton();
 });
 
 styleBtn.addEventListener("click", () => {

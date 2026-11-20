@@ -142,6 +142,7 @@ def test_rest_endpoints(web):
     cfg = client.get("/api/config").json()
     assert cfg["process_fps"] == SETTINGS["process_fps"] and "db_path" not in cfg
     assert cfg["web_dismiss_seconds"] == SETTINGS["web_dismiss_seconds"]
+    assert cfg["web_sound_bands"] == SETTINGS["web_sound_bands"]
     assert client.get("/api/baseline").status_code == 404
     stats = client.get("/api/stats").json()
     assert stats["alerts_today"] == 0 and stats["labels"]["precision"] is None

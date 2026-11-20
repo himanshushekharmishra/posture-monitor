@@ -45,6 +45,22 @@ def test_bad_settings_are_all_reported():
         assert key in text
 
 
+def test_bad_sound_settings_are_reported():
+    from src.utils.validate import settings_problems
+
+    s = json.loads((ROOT / "config" / "settings.json").read_text())
+    s["web_sound_bands"] = [{"from": 1.5, "file": "a.mp3"}, {"from": 1.2, "file": "b.mp3"}]
+    s["web_sound_alert"] = "../secret.mp3"
+    s["web_sound_loudness_db"] = 6
+    text = "\n".join(settings_problems(s))
+    assert "rising order" in text and "web_sound_alert" in text and "loudness" in text
+    s["web_sound_bands"] = [{"from": 1, "file": "sounds/a.mp3"}]
+    assert "file name" in "\n".join(settings_problems(s))
+    s.update(web_sound_bands=[{"from": 1, "file": "a.mp3"}], web_sound_alert="",
+             web_sound_loudness_db=-18)
+    assert settings_problems(s) == []
+
+
 def test_read_settings_rejects_bad_override(monkeypatch):
     import pytest
 

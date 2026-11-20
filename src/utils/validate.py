@@ -7,6 +7,7 @@ EMA_ALPHA=5 as a score that never settles. All problems are reported at once.
 from __future__ import annotations
 
 import math
+import re
 
 POSITIVE = (
     "process_fps", "frame_width", "frame_height", "calibration_seconds",
@@ -19,6 +20,8 @@ NON_NEGATIVE = ("camera_index", "calibration_countdown_seconds", "cooldown_minut
                 "recovery_margin")
 FRACTIONS = ("min_visibility",)  # 0..1
 WEIGHT_KEYS = ("neck", "lean", "shoulder_tilt", "head_tilt")
+# Sound files are named, not pathed: the page fetches /sounds/<file>.
+SOUND_FILE_RE = re.compile(r"[A-Za-z0-9_-][A-Za-z0-9._-]*\.(mp3|ogg|wav)")
 
 
 def _num(v: object) -> bool:
@@ -68,4 +71,29 @@ def settings_problems(s: dict) -> list[str]:
         problems.append(f"web_public_url must start with http:// or https:// (got {url!r})")
     if s.get("sms_provider", "off") not in ("console", "twilio", "off"):
         problems.append(f"sms_provider must be console, twilio or off (got {s['sms_provider']!r})")
+    problems += _sound_problems(s)
+    return problems
+
+
+def _sound_problems(s: dict) -> list[str]:
+    """Web page sound cues (only checked when present)."""
+    problems: list[str] = []
+    bands = s.get("web_sound_bands")
+    if bands is not None:
+        ok = isinstance(bands, list) and all(
+            isinstance(b, dict) and _num(b.get("from")) and b["from"] >= 1
+            and isinstance(b.get("file"), str) and SOUND_FILE_RE.fullmatch(b["file"])
+            for b in bands)
+        if not ok:
+            problems.append('web_sound_bands must be a list of {"from": 1 or more, '
+                            '"file": "name.mp3"} (a file name, not a path)')
+        elif any(a["from"] >= b["from"] for a, b in zip(bands, bands[1:])):
+            problems.append("web_sound_bands must be in rising order of from")
+    for k in ("web_sound_alert", "web_sound_recovered"):
+        v = s.get(k)
+        if v is not None and v != "" and not (isinstance(v, str) and SOUND_FILE_RE.fullmatch(v)):
+            problems.append(f'{k} must be a file name like "alert.mp3", or "" for none (got {v!r})')
+    db = s.get("web_sound_loudness_db")
+    if db is not None and not (_num(db) and -60 <= db <= 0):
+        problems.append(f"web_sound_loudness_db must be between -60 and 0 (got {db!r})")
     return problems

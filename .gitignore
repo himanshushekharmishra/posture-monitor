@@ -9,3 +9,7 @@ models/*.task
 data/input/*
 data/output/*
 !data/**/.gitkeep
+# Sound cues: the user's own clips, not committed (see frontend/sounds/README.md)
+frontend/sounds/*.mp3
+frontend/sounds/*.ogg
+frontend/sounds/*.wav

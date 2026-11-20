@@ -3,7 +3,7 @@
 Where the project stands, what has been checked, and what is left. Update this file
 with every change (see the rule in `CLAUDE.md`).
 
-Last updated: 2026-11-20, on `main`, after dropping the current-password field.
+Last updated: 2026-11-20, on `main`, after adding slouch-meter sounds.
 
 ## Status at a glance
 
@@ -63,7 +63,8 @@ Each phase is one commit, so the history shows how the app was built up.
 | 3D blocks style removed on request; its body-outline grid moved to `frontend/js/bodyshape.js`, which the hologram's neck and shoulders still use. **Style** now switches between Hologram and Lines | `5a2f3ef` |
 | Web page: after `web_dismiss_seconds` (60) with nobody in view, the camera area turns black with a red no-entry sign and DISMISSED; the camera and detection keep running and the first frame with a person clears it | `b4347e7` |
 | Delete account: just a **Delete my account** button and a small "Delete your account?" dialog with Yes and No; the username and password fields are gone, and the server now only needs a logged-in session (the request guard still refuses cross-site and non-JSON writes) | `bc78b66` |
-| Change password no longer asks for the current password, on request: a logged-in session is enough. Other devices are still logged out after a change, and reusing the current password is refused | this commit |
+| Change password no longer asks for the current password, on request: a logged-in session is enough. Other devices are still logged out after a change, and reusing the current password is refused | `26d63a5` |
+| Web page: sound cues by slouch-meter range (`frontend/js/sounds.js`, `web_sound_*` settings): five ranges above the alert line, plus alert and recovery clips, levelled to one loudness, with a Sounds on/off button. The clips stay out of git (third-party meme sounds; the repo copy is public); `frontend/sounds/README.md` lists them. Range logic and levelling checked in headless Chrome with the real clips | this commit |
 
 ## Fixes from the code review (2026-11-15)
 

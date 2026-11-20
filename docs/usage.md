@@ -24,6 +24,12 @@
      sitting up rebuilds it.
    - **Lines**: the simple skeleton. Browsers without WebGL2 always get this one.
 
+   **Sounds** plays a clip once you start slouching, picked by how far up the slouch
+   meter you are (`web_sound_bands`, as multiples of the alert line: 1-1.25x, 1.25-1.5x,
+   1.5-1.75x, 1.75-2x, 2x+). Slumping further in the same slouch plays the next range's
+   clip; the alert and sitting back up have their own. **Sounds: on/off** mutes them.
+   The clips aren't in git: put them in `frontend/sounds/` (its README lists them).
+
    When no one has been in view for `web_dismiss_seconds` (60), the camera area turns
    black with a red no-entry sign and **DISMISSED**. The camera keeps running behind
    it, so the moment you sit back down it clears and monitoring carries on.
