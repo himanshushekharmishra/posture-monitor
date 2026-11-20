@@ -3,7 +3,7 @@
 Where the project stands, what has been checked, and what is left. Update this file
 with every change (see the rule in `CLAUDE.md`).
 
-Last updated: 2026-11-20, on `fix/setup-python-detect`, after fixing Python detection in `setup.ps1`.
+Last updated: 2026-11-20, on `main`, after merging the `setup.ps1` fix and trimming `CLAUDE.md`.
 
 ## Status at a glance
 
@@ -49,7 +49,8 @@ Each phase is one commit, so the history shows how the app was built up.
 | This progress log; docs-update rule in `CLAUDE.md` | `8ec1746` |
 | README pictures: pipeline and posture diagrams, web app screenshots (light and dark), state machine | `26da4d5`, `27bfa01` |
 | `scripts/make_demo_data.py` and steps for retaking the README screenshots | `04ef5e9` |
-| `setup.ps1` really uses `py -3.12`/`-3.11`: on Windows PowerShell 5.1 the version flag was dropped, so it checked the default Python and fell back to uv; `.claude/launch.json` to start the web app from Claude Code | this commit |
+| `setup.ps1` really uses `py -3.12`/`-3.11`: on Windows PowerShell 5.1 the version flag was dropped, so it checked the default Python and fell back to uv; `.claude/launch.json` to start the web app from Claude Code | `6f29b08` |
+| `CLAUDE.md` trimmed to goal, commands and rules; folder map, pipeline, features, state machine and phase list now live only in `docs/architecture.md` and this file | this commit |
 
 ## Fixes from the code review (2026-11-15)
 
@@ -183,6 +184,8 @@ Needs you:
 Optional:
 - Invite friends as collaborators on the private GitHub repo
   (github.com/Ayushman2804/posture-monitor, pushed 2026-11-15).
+- A public copy lives at github.com/himanshushekharmishra/posture-monitor
+  (git remote `himanshu`, created 2026-11-20); push to both remotes to keep it current.
 - FastAPI's test client prints a deprecation warning about `httpx`; harmless.
 
 ## Known limits
