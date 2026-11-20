@@ -143,14 +143,11 @@ def test_password_change_logs_out_other_devices(env):
     other.post("/api/auth/login", json={"username": "changer", "password": PW})
     assert other.get("/api/auth/me").status_code == 200
 
-    wrong = client.post("/api/account/password",
-                        json={"current_password": "not it at all", "new_password": "new long secret"})
-    assert wrong.status_code == 403
-    weak = client.post("/api/account/password",
-                       json={"current_password": PW, "new_password": "short"})
+    weak = client.post("/api/account/password", json={"new_password": "short"})
     assert weak.status_code == 400
-    ok = client.post("/api/account/password",
-                     json={"current_password": PW, "new_password": "new long secret"})
+    same = client.post("/api/account/password", json={"new_password": PW})
+    assert same.status_code == 400 and "already" in same.json()["detail"]
+    ok = client.post("/api/account/password", json={"new_password": "new long secret"})
     assert ok.status_code == 200
     assert client.get("/api/auth/me").status_code == 200  # this device stays logged in
     assert other.get("/api/auth/me").status_code == 401  # the other one is logged out

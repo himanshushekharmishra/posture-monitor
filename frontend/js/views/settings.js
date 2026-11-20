@@ -123,13 +123,11 @@ $("password-form").addEventListener("submit", async (e) => {
     return;
   }
   try {
-    await api("/api/account/password", {
-      current_password: form.current.value, new_password: form.new.value,
-    });
+    await api("/api/account/password", { new_password: form.new.value });
     form.reset();
     setStatus(form, "Password changed. Other devices have been logged out.", "ok");
   } catch (err) {
-    if (err.status === 403) mark(form.current, true);
+    mark(form.new, true);
     setStatus(form, err.message, "error");
   }
 });

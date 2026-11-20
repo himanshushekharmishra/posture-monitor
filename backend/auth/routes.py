@@ -53,7 +53,6 @@ class ProfileBody(BaseModel):
 
 
 class PasswordChangeBody(BaseModel):
-    current_password: str = Field(max_length=256)
     new_password: str = Field(max_length=256)
 
 
@@ -262,15 +261,6 @@ class Auth:
                 raise HTTPException(401, "Log in to continue")
             return user
 
-        def check_password(request: Request, user: User, password: str) -> None:
-            self._limit(self.login_ip, self._ip(request), "password attempts")
-            if self.store.is_locked(user):
-                raise HTTPException(429, "Too many failed attempts on this account. "
-                                         "Try again in 15 minutes.")
-            if not verify_password(password, user.password_hash):
-                self.store.record_failed_login(user.id)
-                raise HTTPException(403, "Your current password isn't right.")
-
         @r.post("/api/account/profile")
         def update_profile(body: ProfileBody, request: Request) -> dict:
             user = require(request)
@@ -284,13 +274,14 @@ class Auth:
         @r.post("/api/account/password")
         def change_password(body: PasswordChangeBody, request: Request,
                             response: Response) -> dict:
+            # A logged-in session is enough (no current password asked); other devices
+            # are logged out below, so a stolen session elsewhere stops working.
             user = require(request)
-            check_password(request, user, body.current_password)
             problem = password_problem(body.new_password, user.username)
             if problem:
                 raise HTTPException(400, problem)
-            if body.new_password == body.current_password:
-                raise HTTPException(400, "Choose a password you haven't used here before.")
+            if verify_password(body.new_password, user.password_hash):
+                raise HTTPException(400, "That's already your password. Choose a new one.")
             self.store.update_password(user.id, hash_password(body.new_password))
             # Everyone else who had this password is logged out; this device gets a new token.
             self.store.delete_other_sessions(user.id, None)
