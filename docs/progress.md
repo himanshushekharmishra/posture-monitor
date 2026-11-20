@@ -3,7 +3,7 @@
 Where the project stands, what has been checked, and what is left. Update this file
 with every change (see the rule in `CLAUDE.md`).
 
-Last updated: 2026-11-20, on `main`, after dropping the blue video tint from the Hologram style.
+Last updated: 2026-11-20, on `main`, after switching the Hologram face to a sparse low-poly mesh.
 
 ## Status at a glance
 
@@ -58,7 +58,8 @@ Each phase is one commit, so the history shows how the app was built up.
 | MIT `LICENSE` and a License section in the README, now that a copy of the repo is public | `f68ae56` |
 | Web page: 3D voxel body (`frontend/js/voxelbody.js`, WebGL2 with custom vertex/fragment shaders) instead of the flat skeleton; cracks while slouching, shatters on an alert, reassembles on recovery; **Show lines** toggle. Rendered in headless Chrome with the example poses (good, slouching, alerted) and checked that voxels line up with the landmarks; not yet tried with a live webcam | `8129534` |
 | Web page: Hologram style, now the default (`frontend/js/hologram.js`): 478-point face mesh (new `face_landmarker.task`, downloaded by `setup.ps1`, served at `/model/face_landmarker.task`, never sent back) as a glowing wireframe, low-poly neck and shoulders, constellation lines, brackets, particles; **Style** cycles Hologram, 3D blocks, Lines. Rendered in headless Chrome with MediaPipe's canonical face mesh fitted onto the example poses (good, slouching, alerted); not yet tried with a live webcam | `2df71d7` |
-| Hologram style keeps the camera video as is (no dark-blue tint), on request after trying it live | this commit |
+| Hologram style keeps the camera video as is (no dark-blue tint), on request after trying it live | `8bec7f8` |
+| Hologram face: a sparse low-poly mesh over 31 key points (fixed triangulation from MediaPipe's canonical face) instead of all 2,556 mesh edges; thinner, light-blue lines with blue-glowing nodes; the body mesh stops at the chin; the canvas mostly adds light, so it never darkens a bright video. Checked in headless Chrome with face and pose detected on a real photo | this commit |
 
 ## Fixes from the code review (2026-11-15)
 

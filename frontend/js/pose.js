@@ -10,8 +10,6 @@ const WASM_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/w
 
 /** [{start, end}] pairs of landmark indexes to draw the skeleton. */
 export const POSE_CONNECTIONS = PoseLandmarker.POSE_CONNECTIONS;
-/** [{start, end}] edges of the 478-point face mesh's triangles. */
-export const FACE_TESSELATION = FaceLandmarker.FACE_LANDMARKS_TESSELATION;
 
 /**
  * Load the pose model. Tries the GPU first and falls back to the CPU.

@@ -1,10 +1,11 @@
 // Holographic wireframe over the camera view (WebGL2, own GLSL shaders).
-//   Face: the 478-point face mesh with its triangle edges as glowing lines and
-//   bright "constellation" lines over one side. Neck and shoulders: a low-poly
+//   Face: a sparse low-poly mesh over 31 key points of the 478-point face mesh
+//   (hairline, brows, eyes, nose, cheeks, mouth, jaw): thin light lines with
+//   glowing nodes at the corners. Neck and shoulders: a low-poly
 //   wireframe made by jittering points over the body's silhouette and joining
 //   neighbours into triangles. Plus corner brackets that track the face, a
 //   sweeping scan line and drifting particles that link up when close.
-//   Cyan while posture is good, amber jitter while slouching; an alert rips the
+//   Light blue while posture is good, amber jitter while slouching; an alert rips the
 //   mesh apart (stretched edges fade out) and sitting up pulls it back together.
 //   Only landmarks come in here; the camera image is never read.
 import { voxelize } from "./voxelbody.js";
@@ -19,23 +20,34 @@ const MAX_FPS = 30;
 const PARTICLES = 70;
 const PARTICLE_LINK = 0.07; // link particles closer than this, x frame width
 const BRACKET_PAD = 0.35; // around the face box
-const FACE_SHORT_EDGE = 0.025; // face edges shorter than this (x frame width) are dimmed
+// Per posture state: [line colour, glow colour]. Lines and node centres are a light
+// shade; the glow around nodes is deeper, like the reference look.
 const PALETTE = {
-  good: [0.25, 0.85, 1.0],
-  slouching: [1.0, 0.72, 0.25],
-  alerted: [1.0, 0.32, 0.28],
-  away: [0.45, 0.62, 0.9],
+  // The glow is still light: over a bright camera image a dark tint would darken it.
+  good: [[0.82, 0.94, 1.0], [0.42, 0.74, 1.0]], // light blue, blue glow
+  slouching: [[1.0, 0.9, 0.7], [1.0, 0.74, 0.35]],
+  alerted: [[1.0, 0.75, 0.72], [1.0, 0.46, 0.42]],
+  away: [[0.85, 0.9, 0.98], [0.6, 0.72, 0.95]],
 };
 
-// Face mesh indexes. Constellation chains over the person's left side, like a
-// star map: forehead, brow, temple, cheek, jaw, chin; eye ring; nose to mouth.
-const CONSTELLATION = [
-  [151, 334, 300, 356, 454, 361, 288, 397, 365, 152],
-  [362, 386, 263, 374, 362],
-  [334, 386],
-  [6, 1, 291, 365],
-  [1, 425, 454],
+// The face's low-poly mesh: edges between 31 face-mesh landmarks (hairline 109 10 338;
+// brows 70 107 9 336 300; eye corners 33 133 362 263; face sides 234 454; nose 6 1 98
+// 327; cheeks 205 425; mouth 61 0 291 17; jaw and chin 132 361 58 288 148 377 152).
+// Delaunay triangulation of those points on MediaPipe's canonical face, computed once,
+// so the mesh keeps its shape from frame to frame.
+const FACE_EDGES = [
+  [0, 1], [0, 17], [0, 61], [0, 98], [0, 291], [0, 327], [1, 6], [1, 98], [1, 133], [1, 327],
+  [1, 362], [6, 9], [6, 107], [6, 133], [6, 336], [6, 362], [9, 10], [9, 107], [9, 336],
+  [10, 107], [10, 109], [10, 336], [10, 338], [17, 61], [17, 148], [17, 152], [17, 291],
+  [17, 377], [33, 70], [33, 107], [33, 133], [33, 205], [33, 234], [58, 61], [58, 132],
+  [58, 148], [58, 205], [61, 98], [61, 148], [61, 205], [70, 107], [70, 109], [70, 234],
+  [98, 133], [98, 205], [107, 109], [107, 133], [132, 205], [132, 234], [133, 205],
+  [148, 152], [152, 377], [205, 234], [263, 300], [263, 336], [263, 362], [263, 425],
+  [263, 454], [288, 291], [288, 361], [288, 377], [288, 425], [291, 327], [291, 377],
+  [291, 425], [300, 336], [300, 338], [300, 454], [327, 362], [327, 425], [336, 338],
+  [336, 362], [361, 425], [361, 454], [362, 425], [425, 454],
 ];
+const FACE_NODES = [...new Set(FACE_EDGES.flat())];
 const L_EAR = 7, R_EAR = 8, L_SHOULDER = 11, R_SHOULDER = 12;
 const SKELETON = [[L_EAR, L_SHOULDER], [R_EAR, R_SHOULDER], [L_SHOULDER, R_SHOULDER],
   [11, 13], [13, 15], [12, 14], [14, 16]];
@@ -88,7 +100,7 @@ void main() {
   float len = max(length(d), 1e-3);
   vec2 t = d / len;
   vec2 n = vec2(-t.y, t.x);
-  float glow = aStyle.w * 2.5 + 1.5;
+  float glow = aStyle.w * 1.5 + 0.6;
   float hw = aStyle.w * 0.5 + glow * 2.0;  // quad half-width, room for the glow
   vec2 p = mix(a, b, aCorner.x) + t * (aCorner.x * 2.0 - 1.0) * hw + n * aCorner.y * hw;
   gl_Position = vec4(p.x / uFrame.x * 2.0 - 1.0, 1.0 - p.y / uFrame.y * 2.0, 0.0, 1.0);
@@ -106,8 +118,14 @@ void main() {
   vY = p.y;
 }`;
 
+// How much the hologram covers the camera image under it (0 = pure added light).
+// Kept below the darkest glow channel, so lines only ever brighten the video, also
+// over a light background; full coverage would let a blue glow darken it.
+const COVER_GLSL = "const float COVER = 0.3;";
+
 const LINE_FS = `#version 300 es
 precision highp float;
+${COVER_GLSL}
 in float vAlong;
 in float vAcross;
 in float vLen;
@@ -116,6 +134,7 @@ in float vGlow;
 in float vBright;
 in float vY;
 uniform vec3 uColor;
+uniform vec3 uGlow;
 uniform float uPixel;  // frame pixels per canvas pixel, for anti-aliasing
 out vec4 outColor;
 
@@ -124,9 +143,9 @@ void main() {
   float d = length(vec2(beyond, vAcross));
   float core = 1.0 - smoothstep(vWidth * 0.5 - uPixel, vWidth * 0.5 + uPixel, d);
   float glow = exp(-(d * d) / (vGlow * vGlow));
-  vec3 color = mix(uColor, vec3(1.0), core * 0.55) * (core + glow * 0.45) * vBright;
-  float a = clamp((core + glow * 0.45) * vBright, 0.0, 1.0);
-  outColor = vec4(color, a);  // added on top (additive blending)
+  vec3 color = (uColor * core + uGlow * glow * 0.25) * vBright;
+  float a = clamp((core + glow * 0.25) * vBright, 0.0, 1.0);
+  outColor = vec4(color, a * COVER);
 }`;
 
 const POINT_VS = `#version 300 es
@@ -154,19 +173,21 @@ void main() {
 
 const POINT_FS = `#version 300 es
 precision highp float;
+${COVER_GLSL}
 in vec2 vOffset;
 in float vRadius;
 in float vBright;
 uniform vec3 uColor;
+uniform vec3 uGlow;
 uniform float uPixel;
 out vec4 outColor;
 
 void main() {
   float d = length(vOffset);
   float core = 1.0 - smoothstep(vRadius - uPixel, vRadius + uPixel, d);
-  float halo = exp(-(d * d) / (vRadius * vRadius * 3.0));
-  vec3 color = mix(uColor, vec3(1.0), core * 0.7) * (core + halo * 0.6) * vBright;
-  outColor = vec4(color, clamp((core + halo * 0.6) * vBright, 0.0, 1.0));
+  float halo = exp(-(d * d) / (vRadius * vRadius * 5.0));
+  vec3 color = (mix(uColor, vec3(1.0), 0.6) * core + uGlow * halo * 0.9) * vBright;
+  outColor = vec4(color, clamp((core + halo * 0.9) * vBright, 0.0, 1.0) * COVER);
 }`;
 
 function program(gl, vsSource, fsSource) {
@@ -244,7 +265,7 @@ class Batch {
  * Build this frame's lines and points (frame pixels, y down).
  * Exported for testing; the renderer calls it every animation frame.
  */
-export function buildHologram(pose, face, width, height, minVisibility, faceEdges, particles = []) {
+export function buildHologram(pose, face, width, height, minVisibility, particles = []) {
   const lines = new Batch(8); // ax, ay, bx, by, seedA, seedB, brightness, width
   const points = new Batch(5); // x, y, seed, brightness, radius
 
@@ -253,26 +274,12 @@ export function buildHologram(pose, face, width, height, minVisibility, faceEdge
   if (face) {
     const fx = (i) => face[i].x * width;
     const fy = (i) => face[i].y * height;
-    const near = (i) => 0.6 + 0.4 * clamp01(-(face[i].z ?? 0) * 6); // nearer is brighter
+    const near = (i) => 0.75 + 0.25 * clamp01(-(face[i].z ?? 0) * 6); // nearer is brighter
     const seed = (i) => hash01(i + 1000);
-    // Eyes and lips pack many tiny triangles; with additive light they'd burn white,
-    // so short edges are dimmer and the web stays even.
-    const shortEdge = FACE_SHORT_EDGE * width;
-    for (const [a, b] of faceEdges) {
-      const len = Math.hypot(fx(b) - fx(a), fy(b) - fy(a));
-      const bright = 0.4 * (near(a) + near(b)) / 2 * (0.3 + 0.7 * clamp01(len / shortEdge));
-      lines.push(fx(a), fy(a), fx(b), fy(b), seed(a), seed(b), bright, 0.5);
+    for (const [a, b] of FACE_EDGES) {
+      lines.push(fx(a), fy(a), fx(b), fy(b), seed(a), seed(b), 1.15 * (near(a) + near(b)) / 2, 0.7);
     }
-    for (let i = 0; i < face.length; i++) points.push(fx(i), fy(i), seed(i), 0.32 * near(i), 0.75);
-    const bright = new Set();
-    for (const chain of CONSTELLATION) {
-      for (let k = 0; k + 1 < chain.length; k++) {
-        const [a, b] = [chain[k], chain[k + 1]];
-        lines.push(fx(a), fy(a), fx(b), fy(b), seed(a), seed(b), 1.25, 1.6);
-        bright.add(a).add(b);
-      }
-    }
-    for (const i of bright) points.push(fx(i), fy(i), seed(i), 1.5, 2.8);
+    for (const i of FACE_NODES) points.push(fx(i), fy(i), seed(i), 1.3 * near(i), 1.7);
 
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const p of face) {
@@ -285,11 +292,11 @@ export function buildHologram(pose, face, width, height, minVisibility, faceEdge
   // Body: jittered points over the silhouette, joined into triangles.
   if (pose) {
     const { voxels, cell } = voxelize(pose, width, height, minVisibility, BODY_COLUMNS);
+    // With a face mesh, the body mesh stops at the chin so the two don't overlap.
     const inFace = (x, y) => {
       if (!faceBox) return false;
-      const cx = (faceBox.minX + faceBox.maxX) / 2, cy = (faceBox.minY + faceBox.maxY) / 2;
-      const rx = (faceBox.maxX - faceBox.minX) / 2, ry = (faceBox.maxY - faceBox.minY) / 2;
-      return ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 < 1;
+      const margin = (faceBox.maxX - faceBox.minX) * 0.2;
+      return y < faceBox.maxY && x > faceBox.minX - margin && x < faceBox.maxX + margin;
     };
     const verts = new Map(); // "i,j" -> [x, y, seed, key]
     for (let n = 0; n < voxels.length / 6; n++) {
@@ -304,7 +311,7 @@ export function buildHologram(pose, face, width, height, minVisibility, faceEdge
     const link = (p, q) => {
       if (!p || !q) return;
       const key = Math.max(p[3], q[3]);
-      lines.push(p[0], p[1], q[0], q[1], p[2], q[2], 0.4 + 0.5 * key, 0.6 + 0.4 * key);
+      lines.push(p[0], p[1], q[0], q[1], p[2], q[2], 0.3 + 0.4 * key, 0.35 + 0.2 * key);
     };
     for (const [id, p] of verts) {
       const [i, j] = id.split(",").map(Number);
@@ -313,7 +320,7 @@ export function buildHologram(pose, face, width, height, minVisibility, faceEdge
       // One diagonal per grid square, picked at random, makes it read as triangles.
       if (hash01(j * 4096 + i + 99) < 0.5) link(p, verts.get(`${i + 1},${j + 1}`));
       else link(verts.get(`${i + 1},${j}`), verts.get(`${i},${j + 1}`));
-      points.push(p[0], p[1], p[2], 0.45 + 0.5 * p[3], 1.1);
+      points.push(p[0], p[1], p[2], 0.35 + 0.4 * p[3], 0.9);
     }
 
     // The lines the score is built on, drawn bright over the mesh.
@@ -321,10 +328,10 @@ export function buildHologram(pose, face, width, height, minVisibility, faceEdge
     const px = (i) => pose[i].x * width, py = (i) => pose[i].y * height;
     for (const [a, b] of SKELETON) {
       if (seen(a) && seen(b)) {
-        lines.push(px(a), py(a), px(b), py(b), hash01(a + 500), hash01(b + 500), 1.0, 1.4);
+        lines.push(px(a), py(a), px(b), py(b), hash01(a + 500), hash01(b + 500), 0.9, 0.7);
       }
     }
-    for (const i of KEY_JOINTS) if (seen(i)) points.push(px(i), py(i), hash01(i + 500), 1.4, 3.0);
+    for (const i of KEY_JOINTS) if (seen(i)) points.push(px(i), py(i), hash01(i + 500), 1.3, 2.2);
 
     if (!faceBox && seen(L_EAR) && seen(R_EAR)) {
       const half = Math.abs(px(L_EAR) - px(R_EAR)) * 0.75;
@@ -340,8 +347,8 @@ export function buildHologram(pose, face, width, height, minVisibility, faceEdge
     const y0 = faceBox.minY - h * BRACKET_PAD * 0.6, y1 = faceBox.maxY + h * BRACKET_PAD * 0.6;
     const len = Math.min(x1 - x0, y1 - y0) * 0.18;
     for (const [x, y, dx, dy] of [[x0, y0, 1, 1], [x1, y0, -1, 1], [x0, y1, 1, -1], [x1, y1, -1, -1]]) {
-      lines.push(x, y, x + dx * len, y, -1, -1, 0.7, 1.6);
-      lines.push(x, y, x, y + dy * len, -1, -1, 0.7, 1.6);
+      lines.push(x, y, x + dx * len, y, -1, -1, 0.7, 0.9);
+      lines.push(x, y, x, y + dy * len, -1, -1, 0.7, 0.9);
     }
   }
 
@@ -355,7 +362,7 @@ export function buildHologram(pose, face, width, height, minVisibility, faceEdge
       const q = particles[b];
       const d = Math.hypot(p.x - q.x, p.y - q.y);
       if (d < linkDist) {
-        lines.push(p.x, p.y, q.x, q.y, -1, -1, 0.35 * (1 - d / linkDist) * Math.min(p.alpha, q.alpha), 0.35);
+        lines.push(p.x, p.y, q.x, q.y, -1, -1, 0.35 * (1 - d / linkDist) * Math.min(p.alpha, q.alpha), 0.25);
         links++;
       }
     }
@@ -388,11 +395,8 @@ function moveParticles(particles, width, height, dt) {
   }
 }
 
-/**
- * Create the renderer on a canvas laid over the video. `faceEdges` is the face mesh's
- * edge list ([[a, b], ...]). Returns null when WebGL2 isn't available.
- */
-export function createHologram(canvas, faceEdges) {
+/** Create the renderer on a canvas laid over the video. Returns null without WebGL2. */
+export function createHologram(canvas) {
   const gl = canvas.getContext("webgl2", { premultipliedAlpha: true, antialias: false });
   if (!gl) return null;
   let lineProg, pointProg;
@@ -403,17 +407,6 @@ export function createHologram(canvas, faceEdges) {
     console.warn("Hologram view unavailable:", err);
     return null;
   }
-  // Deduplicated edges, so shared triangle sides aren't drawn twice as bright.
-  const edges = [];
-  const seenEdges = new Set();
-  for (const [a, b] of faceEdges) {
-    const key = Math.min(a, b) * 1000 + Math.max(a, b);
-    if (!seenEdges.has(key)) {
-      seenEdges.add(key);
-      edges.push([a, b]);
-    }
-  }
-
   const lineQuad = [0, -1, 1, -1, 1, 1, 0, -1, 1, 1, 0, 1];
   const pointQuad = [-1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1];
   const lineVao = instancedVao(gl, lineQuad, [[1, 4, 0], [2, 4, 4]], 8);
@@ -424,7 +417,7 @@ export function createHologram(canvas, faceEdges) {
     pose: null, face: null, // latest detections
     drawnPose: null, drawnFace: null, // smoothed copies that are drawn
     frameW: 640, frameH: 480, minVisibility: 0.5,
-    color: PALETTE.away.slice(), targetColor: PALETTE.away,
+    colors: PALETTE.away.map((c) => c.slice()), targetColors: PALETTE.away,
     crackTarget: 0, shatterTarget: 0, crack: 0, shatter: 0, presence: 0,
     particles: makeParticles(640, 480),
     running: false, lost: false, raf: 0, last: 0,
@@ -471,7 +464,8 @@ export function createHologram(canvas, faceEdges) {
     gl.uniform1f(u.uCrack, state.crack);
     gl.uniform1f(u.uShatter, state.shatter);
     gl.uniform1f(u.uScatter, state.frameW * 0.3);
-    gl.uniform3fv(u.uColor, state.color.map((c) => c * state.presence));
+    gl.uniform3fv(u.uColor, state.colors[0].map((c) => c * state.presence));
+    gl.uniform3fv(u.uGlow, state.colors[1].map((c) => c * state.presence));
     gl.uniform1f(u.uPixel, state.frameW / canvas.width);
     gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, batch.count);
   }
@@ -488,7 +482,8 @@ export function createHologram(canvas, faceEdges) {
     state.shatter = still ? 0 : step(state.shatter, state.shatterTarget,
       state.shatterTarget > state.shatter ? SHATTER_SECONDS : REASSEMBLE_SECONDS, dt);
     state.presence = approach(state.presence, state.pose || state.face ? 1 : 0, FADE_RATE, dt);
-    state.color = state.color.map((c, i) => approach(c, state.targetColor[i], 4, dt));
+    state.colors = state.colors.map((tone, t) =>
+      tone.map((c, i) => approach(c, state.targetColors[t][i], 4, dt)));
     state.drawnPose = follow(state.drawnPose, state.pose, dt);
     state.drawnFace = state.face ? follow(state.drawnFace, state.face, dt) : null;
     if (!still) moveParticles(state.particles, state.frameW, state.frameH, dt);
@@ -500,7 +495,7 @@ export function createHologram(canvas, faceEdges) {
     if (state.presence < 0.01) return;
 
     const { lines, points } = buildHologram(state.drawnPose, state.drawnFace, state.frameW,
-      state.frameH, state.minVisibility, edges, state.particles);
+      state.frameH, state.minVisibility, state.particles);
     gl.disable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE); // light adds up, like a hologram
@@ -546,7 +541,7 @@ export function createHologram(canvas, faceEdges) {
     },
     /** Same meaning as the voxel body's: crack while slouching, shatter on an alert. */
     setPosture(postureState, slouchSeconds, persistSeconds) {
-      state.targetColor = PALETTE[postureState] ?? PALETTE.away;
+      state.targetColors = PALETTE[postureState] ?? PALETTE.away;
       state.shatterTarget = postureState === "alerted" ? 1 : 0;
       state.crackTarget = postureState === "slouching"
         ? 0.3 + 0.7 * clamp01(slouchSeconds / persistSeconds)

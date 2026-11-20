@@ -2,7 +2,7 @@
 //   camera frames stay here; only landmarks ([x, y, visibility] x 33) are sent.
 import { api } from "./api.js";
 import { PostureSocket } from "./connection.js";
-import { createFaceDetector, createPoseDetector, FACE_TESSELATION } from "./pose.js";
+import { createFaceDetector, createPoseDetector } from "./pose.js";
 import { createHologram } from "./hologram.js";
 import { clearSkeleton, drawSkeleton } from "./skeleton.js";
 import { createVoxelBody } from "./voxelbody.js";
@@ -26,8 +26,7 @@ const app = {
   face: null, // 478-point face mesh detector, for the hologram; drawn here, never sent
   renderers: {
     // null without WebGL2; "lines" (the 2D skeleton) always works
-    hologram: createHologram(document.getElementById("hologram"),
-      FACE_TESSELATION.map((c) => [c.start, c.end])),
+    hologram: createHologram(document.getElementById("hologram")),
     voxels: createVoxelBody(document.getElementById("voxels")),
   },
   style: readStyle(),

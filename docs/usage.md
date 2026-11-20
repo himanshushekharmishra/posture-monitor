@@ -17,10 +17,11 @@
 3. **Start camera** and allow camera access. The pose model runs in the page; only
    33 body points per frame are sent to the server, never the video. **Style** cycles
    how your pose is drawn (the page remembers your choice):
-   - **Hologram** (default): a glowing wireframe of your face (478-point face mesh,
-     which stays in the page) and a low-poly neck and shoulders, with scanner
-     brackets and drifting particles. Cyan when your posture is good, amber jitter
-     while slouching; an alert rips the mesh apart and sitting up rebuilds it.
+   - **Hologram** (default): a low-poly face mesh over key points of your face
+     (from a 478-point face mesh that stays in the page), thin light-blue lines with
+     glowing nodes, plus a low-poly neck and shoulders, scanner brackets and drifting
+     particles. Amber jitter while slouching; an alert rips the mesh apart and
+     sitting up rebuilds it.
    - **3D blocks**: a voxel body whose neck and ear-to-shoulder bands glow in the
      posture colour; it cracks while you slouch and shatters on an alert.
    - **Lines**: the simple skeleton. Browsers without WebGL2 always get this one.
