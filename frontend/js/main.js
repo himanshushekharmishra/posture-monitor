@@ -58,7 +58,6 @@ function renderStyleButton() {
   const styles = STYLES.filter(usable);
   styleBtn.hidden = styles.length < 2;
   styleBtn.textContent = `Style: ${STYLE_NAMES[activeStyle()]}`;
-  document.getElementById("stage").dataset.style = activeStyle();
 }
 
 function applyStyle() {

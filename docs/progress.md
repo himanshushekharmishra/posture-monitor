@@ -3,7 +3,7 @@
 Where the project stands, what has been checked, and what is left. Update this file
 with every change (see the rule in `CLAUDE.md`).
 
-Last updated: 2026-11-20, on `main`, after adding the Hologram style to the web page.
+Last updated: 2026-11-20, on `main`, after dropping the blue video tint from the Hologram style.
 
 ## Status at a glance
 
@@ -57,7 +57,8 @@ Each phase is one commit, so the history shows how the app was built up.
 | GitHub Actions runs `pytest -q` on Windows with Python 3.12 on every push and pull request (`.github/workflows/tests.yml`); no camera or model needed | `f4aa14d` |
 | MIT `LICENSE` and a License section in the README, now that a copy of the repo is public | `f68ae56` |
 | Web page: 3D voxel body (`frontend/js/voxelbody.js`, WebGL2 with custom vertex/fragment shaders) instead of the flat skeleton; cracks while slouching, shatters on an alert, reassembles on recovery; **Show lines** toggle. Rendered in headless Chrome with the example poses (good, slouching, alerted) and checked that voxels line up with the landmarks; not yet tried with a live webcam | `8129534` |
-| Web page: Hologram style, now the default (`frontend/js/hologram.js`): 478-point face mesh (new `face_landmarker.task`, downloaded by `setup.ps1`, served at `/model/face_landmarker.task`, never sent back) as a glowing wireframe, low-poly neck and shoulders, constellation lines, brackets, particles; **Style** cycles Hologram, 3D blocks, Lines. Rendered in headless Chrome with MediaPipe's canonical face mesh fitted onto the example poses (good, slouching, alerted); not yet tried with a live webcam | this commit |
+| Web page: Hologram style, now the default (`frontend/js/hologram.js`): 478-point face mesh (new `face_landmarker.task`, downloaded by `setup.ps1`, served at `/model/face_landmarker.task`, never sent back) as a glowing wireframe, low-poly neck and shoulders, constellation lines, brackets, particles; **Style** cycles Hologram, 3D blocks, Lines. Rendered in headless Chrome with MediaPipe's canonical face mesh fitted onto the example poses (good, slouching, alerted); not yet tried with a live webcam | `2df71d7` |
+| Hologram style keeps the camera video as is (no dark-blue tint), on request after trying it live | this commit |
 
 ## Fixes from the code review (2026-11-15)
 
