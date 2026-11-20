@@ -15,15 +15,13 @@
      `guest_trial_days` (14). Connect Google, GitHub or a phone before it ends to
      keep the account; after that you'll be asked to.
 3. **Start camera** and allow camera access. The pose model runs in the page; only
-   33 body points per frame are sent to the server, never the video. **Style** cycles
+   33 body points per frame are sent to the server, never the video. **Style** switches
    how your pose is drawn (the page remembers your choice):
    - **Hologram** (default): a low-poly face mesh over key points of your face
      (from a 478-point face mesh that stays in the page), thin light-blue lines with
      glowing nodes, plus a low-poly neck and shoulders, scanner brackets and drifting
      particles. Amber jitter while slouching; an alert rips the mesh apart and
      sitting up rebuilds it.
-   - **3D blocks**: a voxel body whose neck and ear-to-shoulder bands glow in the
-     posture colour; it cracks while you slouch and shatters on an alert.
    - **Lines**: the simple skeleton. Browsers without WebGL2 always get this one.
 4. Sit upright and press **Calibrate** (3 s countdown, 5 s recording). Each account
    has its own calibration and history. The desktop app keeps its own.

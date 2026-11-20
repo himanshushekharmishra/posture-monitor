@@ -5,7 +5,6 @@ import { PostureSocket } from "./connection.js";
 import { createFaceDetector, createPoseDetector } from "./pose.js";
 import { createHologram } from "./hologram.js";
 import { clearSkeleton, drawSkeleton } from "./skeleton.js";
-import { createVoxelBody } from "./voxelbody.js";
 import * as view from "./view.js";
 
 const video = document.getElementById("video");
@@ -27,14 +26,13 @@ const app = {
   renderers: {
     // null without WebGL2; "lines" (the 2D skeleton) always works
     hologram: createHologram(document.getElementById("hologram")),
-    voxels: createVoxelBody(document.getElementById("voxels")),
   },
   style: readStyle(),
 };
 
-// ---------- view style: hologram, 3D voxel body or 2D lines ----------
-const STYLES = ["hologram", "voxels", "lines"];
-const STYLE_NAMES = { hologram: "Hologram", voxels: "3D blocks", lines: "Lines" };
+// ---------- view style: hologram or 2D lines ----------
+const STYLES = ["hologram", "lines"];
+const STYLE_NAMES = { hologram: "Hologram", lines: "Lines" };
 
 function readStyle() {
   try {
@@ -202,8 +200,6 @@ function tick() {
   if (style === "hologram") {
     const face = app.face ? app.face.detect(video).landmarks : null;
     app.renderers.hologram.setPose(landmarks, face, video.videoWidth, video.videoHeight, minVis);
-  } else if (style === "voxels") {
-    app.renderers.voxels.setPose(landmarks, video.videoWidth, video.videoHeight, minVis);
   } else {
     drawSkeleton(overlay, video, landmarks, minVis, app.stateColor);
   }

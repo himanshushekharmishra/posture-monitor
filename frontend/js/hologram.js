@@ -8,7 +8,7 @@
 //   Light blue while posture is good, amber jitter while slouching; an alert rips the
 //   mesh apart (stretched edges fade out) and sitting up pulls it back together.
 //   Only landmarks come in here; the camera image is never read.
-import { voxelize } from "./voxelbody.js";
+import { voxelize } from "./bodyshape.js";
 
 const BODY_COLUMNS = 24; // body mesh points across the frame width
 const FOLLOW_RATE = 14; // per second: how fast the drawn points catch up with detections
@@ -539,7 +539,7 @@ export function createHologram(canvas) {
       }
       state.minVisibility = minVisibility;
     },
-    /** Same meaning as the voxel body's: crack while slouching, shatter on an alert. */
+    /** Jitter while slouching (more as the alert nears), shatter on an alert. */
     setPosture(postureState, slouchSeconds, persistSeconds) {
       state.targetColors = PALETTE[postureState] ?? PALETTE.away;
       state.shatterTarget = postureState === "alerted" ? 1 : 0;
