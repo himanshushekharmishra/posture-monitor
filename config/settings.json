@@ -4,6 +4,7 @@
   "frame_height": 480,
   "process_fps": 5,
   "model_path": "models/pose_landmarker_lite.task",
+  "face_model_path": "models/face_landmarker.task",
   "min_visibility": 0.5,
   "calibration_seconds": 5,
   "calibration_countdown_seconds": 3,

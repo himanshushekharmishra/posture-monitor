@@ -109,6 +109,7 @@ def create_app(
 ) -> FastAPI:
     db_path = root / settings["db_path"]
     model_path = root / settings["model_path"]
+    face_model_path = root / settings["face_model_path"]
     frontend_dir = root / "frontend"
     store = auth_store or AuthStore(db_path, load_or_create_secret(root / settings["secret_key_path"]))
     auth = Auth(settings, store, sms if sms is not None else make_sender(settings))
@@ -242,6 +243,15 @@ def create_app(
         if not model_path.is_file():
             raise HTTPException(404, f"Model missing: run scripts\\setup.ps1 ({model_path.name})")
         return FileResponse(model_path, media_type="application/octet-stream")
+
+    @app.get("/model/face_landmarker.task")
+    def face_model() -> FileResponse:
+        """478-point face mesh for the page's hologram view. The face points are only
+        drawn in the browser; they are never sent back here."""
+        if not face_model_path.is_file():
+            raise HTTPException(404, "Face model missing: run scripts\\setup.ps1 "
+                                     f"({face_model_path.name})")
+        return FileResponse(face_model_path, media_type="application/octet-stream")
 
     @app.websocket("/ws")
     async def posture_socket(ws: WebSocket) -> None:

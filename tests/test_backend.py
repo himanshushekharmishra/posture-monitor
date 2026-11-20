@@ -145,6 +145,7 @@ def test_rest_endpoints(web):
     stats = client.get("/api/stats").json()
     assert stats["alerts_today"] == 0 and stats["labels"]["precision"] is None
     assert client.get("/model/pose_landmarker.task").status_code == 404  # no model in tmp
+    assert client.get("/model/face_landmarker.task").status_code == 404
     assert "hi" in client.get("/").text  # frontend is served
 
 

@@ -129,5 +129,5 @@ with nobody in frame, so expect somewhat more while it tracks you. Full numbers 
 method: [docs/benchmarks.md](docs/benchmarks.md).
 
 ## License
-MIT, see [LICENSE](LICENSE). The MediaPipe pose model that `setup.ps1` downloads is
-Google's and comes under its own terms (Apache 2.0).
+MIT, see [LICENSE](LICENSE). The MediaPipe pose and face models that `setup.ps1` downloads are
+Google's and come under their own terms (Apache 2.0).

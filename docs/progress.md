@@ -3,7 +3,7 @@
 Where the project stands, what has been checked, and what is left. Update this file
 with every change (see the rule in `CLAUDE.md`).
 
-Last updated: 2026-11-20, on `main`, after adding the 3D voxel body to the web page.
+Last updated: 2026-11-20, on `main`, after adding the Hologram style to the web page.
 
 ## Status at a glance
 
@@ -56,7 +56,8 @@ Each phase is one commit, so the history shows how the app was built up.
 | Known limits and `backend/__main__.py` no longer say the web server has no login (accounts were added); the reason to stay on `127.0.0.1` is plain HTTP | `ec2cb9f` |
 | GitHub Actions runs `pytest -q` on Windows with Python 3.12 on every push and pull request (`.github/workflows/tests.yml`); no camera or model needed | `f4aa14d` |
 | MIT `LICENSE` and a License section in the README, now that a copy of the repo is public | `f68ae56` |
-| Web page: 3D voxel body (`frontend/js/voxelbody.js`, WebGL2 with custom vertex/fragment shaders) instead of the flat skeleton; cracks while slouching, shatters on an alert, reassembles on recovery; **Show lines** toggle. Rendered in headless Chrome with the example poses (good, slouching, alerted) and checked that voxels line up with the landmarks; not yet tried with a live webcam | this commit |
+| Web page: 3D voxel body (`frontend/js/voxelbody.js`, WebGL2 with custom vertex/fragment shaders) instead of the flat skeleton; cracks while slouching, shatters on an alert, reassembles on recovery; **Show lines** toggle. Rendered in headless Chrome with the example poses (good, slouching, alerted) and checked that voxels line up with the landmarks; not yet tried with a live webcam | `8129534` |
+| Web page: Hologram style, now the default (`frontend/js/hologram.js`): 478-point face mesh (new `face_landmarker.task`, downloaded by `setup.ps1`, served at `/model/face_landmarker.task`, never sent back) as a glowing wireframe, low-poly neck and shoulders, constellation lines, brackets, particles; **Style** cycles Hologram, 3D blocks, Lines. Rendered in headless Chrome with MediaPipe's canonical face mesh fitted onto the example poses (good, slouching, alerted); not yet tried with a live webcam | this commit |
 
 ## Fixes from the code review (2026-11-15)
 
@@ -182,7 +183,8 @@ Needs you:
    sitting level.
 2. Try the web page with your webcam in Chrome or Edge (`python -m backend`).
    The built-in test browser blocks cameras, so this hasn't been tried yet. Check
-   that the 3D voxel body follows you smoothly and stays aligned with the video.
+   that the Hologram and 3D blocks styles follow you smoothly and stay aligned with
+   the video.
 3. Let a real slouch alert fire, and try `scripts\run.ps1` with Recalibrate from the tray.
 4. Do a 30-minute labelled session (`python -m src.main --label` or the web page's
    yes/no buttons) to get the alert precision number.

@@ -62,4 +62,10 @@ if (-not (Test-Path $model)) {
   Write-Host "Downloading pose model"
   Invoke-WebRequest -Uri $url -OutFile $model
 }
+$faceModel = "modelsace_landmarker.task"  # web page hologram view only
+if (-not (Test-Path $faceModel)) {
+  $url = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task"
+  Write-Host "Downloading face model"
+  Invoke-WebRequest -Uri $url -OutFile $faceModel
+}
 Write-Host "Setup complete. Activate with: .\venv\Scripts\Activate.ps1"

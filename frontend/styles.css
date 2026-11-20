@@ -184,6 +184,15 @@ button:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
   transform: scaleX(-1); /* mirror, like a mirror */
 }
 .stage[data-camera="off"] video, .stage[data-camera="off"] canvas { visibility: hidden; }
+/* Hologram view: the video sinks into a dark blue so the glowing mesh stands out. */
+.stage[data-style="hologram"] {
+  background: radial-gradient(ellipse at 50% 35%, #0b3a66 0%, #061a33 55%, #030c1a 100%);
+}
+.stage[data-style="hologram"] video {
+  filter: grayscale(1) brightness(0.35) contrast(1.2);
+  mix-blend-mode: luminosity;
+  opacity: 0.55;
+}
 .stage-message {
   position: absolute; inset: 0;
   display: grid; place-content: center; gap: 0.5rem;

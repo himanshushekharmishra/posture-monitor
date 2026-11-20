@@ -2,7 +2,8 @@
 //   camera frames stay here; only landmarks ([x, y, visibility] x 33) are sent.
 import { api } from "./api.js";
 import { PostureSocket } from "./connection.js";
-import { createPoseDetector } from "./pose.js";
+import { createFaceDetector, createPoseDetector, FACE_TESSELATION } from "./pose.js";
+import { createHologram } from "./hologram.js";
 import { clearSkeleton, drawSkeleton } from "./skeleton.js";
 import { createVoxelBody } from "./voxelbody.js";
 import * as view from "./view.js";
@@ -11,6 +12,7 @@ const video = document.getElementById("video");
 const overlay = document.getElementById("overlay");
 const styleBtn = document.getElementById("style-btn");
 const MODEL_URL = "/model/pose_landmarker.task";
+const FACE_MODEL_URL = "/model/face_landmarker.task";
 const STYLE_KEY = "posture.viewStyle";
 
 const app = {
@@ -21,36 +23,54 @@ const app = {
   calibrating: false,
   alertPending: false,
   stateColor: "#7f8d95",
-  voxels: createVoxelBody(document.getElementById("voxels")), // null without WebGL2
+  face: null, // 478-point face mesh detector, for the hologram; drawn here, never sent
+  renderers: {
+    // null without WebGL2; "lines" (the 2D skeleton) always works
+    hologram: createHologram(document.getElementById("hologram"),
+      FACE_TESSELATION.map((c) => [c.start, c.end])),
+    voxels: createVoxelBody(document.getElementById("voxels")),
+  },
   style: readStyle(),
 };
 
-// ---------- view style: 3D voxel body or 2D lines ----------
+// ---------- view style: hologram, 3D voxel body or 2D lines ----------
+const STYLES = ["hologram", "voxels", "lines"];
+const STYLE_NAMES = { hologram: "Hologram", voxels: "3D blocks", lines: "Lines" };
+
 function readStyle() {
   try {
-    return localStorage.getItem(STYLE_KEY) === "lines" ? "lines" : "voxels";
+    const saved = localStorage.getItem(STYLE_KEY);
+    return STYLES.includes(saved) ? saved : "hologram";
   } catch {
-    return "voxels"; // storage blocked (private window, site data off)
+    return "hologram"; // storage blocked (private window, site data off)
   }
 }
 
-function voxelsOn() {
-  return app.style === "voxels" && Boolean(app.voxels?.available);
+const usable = (style) => style === "lines" || Boolean(app.renderers[style]?.available);
+
+/** The style actually shown: the chosen one, or the next that works on this browser. */
+function activeStyle() {
+  const from = STYLES.indexOf(app.style);
+  return [...STYLES.slice(from), ...STYLES.slice(0, from)].find(usable);
 }
 
 function renderStyleButton() {
-  styleBtn.hidden = !app.voxels?.available;
-  styleBtn.textContent = voxelsOn() ? "Show lines" : "Show 3D body";
+  const styles = STYLES.filter(usable);
+  styleBtn.hidden = styles.length < 2;
+  styleBtn.textContent = `Style: ${STYLE_NAMES[activeStyle()]}`;
+  document.getElementById("stage").dataset.style = activeStyle();
 }
 
 function applyStyle() {
   renderStyleButton();
+  const active = activeStyle();
+  for (const [style, renderer] of Object.entries(app.renderers)) {
+    if (renderer && (style !== active || !app.stream)) renderer.stop();
+  }
   if (!app.stream) return;
-  if (voxelsOn()) {
+  if (active !== "lines") {
     clearSkeleton(overlay);
-    app.voxels.start();
-  } else {
-    app.voxels?.stop();
+    app.renderers[active].start();
   }
 }
 
@@ -118,7 +138,9 @@ function handleFrame(msg) {
   view.renderFrame(msg);
   app.stateColor = getComputedStyle(document.getElementById("readout"))
     .getPropertyValue("--state").trim() || app.stateColor;
-  app.voxels?.setPosture(msg.state, msg.slouch_seconds, app.config.persist_seconds, app.stateColor);
+  for (const renderer of Object.values(app.renderers)) {
+    renderer?.setPosture(msg.state, msg.slouch_seconds, app.config.persist_seconds, app.stateColor);
+  }
 
   if (msg.calibration) {
     const phase = msg.calibration.phase;
@@ -175,11 +197,17 @@ ticker.onmessage = tick;
 function tick() {
   if (!app.stream || video.readyState < 2) return;
   const { landmarks, ms } = app.detector.detect(video);
-  if (voxelsOn()) {
-    app.voxels.setPose(landmarks, video.videoWidth, video.videoHeight, app.config.min_visibility);
+  const style = activeStyle();
+  if (style !== app.shownStyle) applyStyle(); // e.g. a GPU context was lost
+  app.shownStyle = style;
+  const minVis = app.config.min_visibility;
+  if (style === "hologram") {
+    const face = app.face ? app.face.detect(video).landmarks : null;
+    app.renderers.hologram.setPose(landmarks, face, video.videoWidth, video.videoHeight, minVis);
+  } else if (style === "voxels") {
+    app.renderers.voxels.setPose(landmarks, video.videoWidth, video.videoHeight, minVis);
   } else {
-    if (app.voxels && !app.voxels.available) renderStyleButton(); // GPU context was lost
-    drawSkeleton(overlay, video, landmarks, app.config.min_visibility, app.stateColor);
+    drawSkeleton(overlay, video, landmarks, minVis, app.stateColor);
   }
   socket.send({
     type: "frame",
@@ -235,7 +263,7 @@ function stopCamera() {
   app.stream = null;
   video.srcObject = null;
   clearSkeleton(overlay);
-  app.voxels?.stop();
+  applyStyle(); // no stream now: stops whichever renderer was running
   view.setCameraOn(false);
   view.showCameraOff(); // don't leave the last posture state on screen
   view.setHint("Camera off.");
@@ -253,7 +281,8 @@ document.getElementById("calibrate-btn").addEventListener("click", () => {
 });
 
 styleBtn.addEventListener("click", () => {
-  app.style = voxelsOn() ? "lines" : "voxels";
+  const styles = STYLES.filter(usable);
+  app.style = styles[(styles.indexOf(activeStyle()) + 1) % styles.length];
   try {
     localStorage.setItem(STYLE_KEY, app.style);
   } catch {
@@ -334,6 +363,11 @@ async function init() {
   }
   view.setHint(`Pose model ready (${app.detector.delegate}). Start the camera when you're at your desk.`);
   renderStyleButton();
+  // The face mesh only adds detail to the hologram, so it loads in the background and
+  // its absence (an old setup without the face model) isn't an error.
+  createFaceDetector(FACE_MODEL_URL)
+    .then((face) => (app.face = face))
+    .catch((err) => console.warn("Face mesh unavailable (run scripts\\setup.ps1):", err));
   refreshButtons();
   refreshStats();
   setInterval(refreshStats, 60_000);

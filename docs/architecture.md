@@ -96,7 +96,7 @@ Recalibrate runs the calibration window on the worker thread and then carries on
 flowchart LR
     subgraph browser["Browser (frontend/)"]
         cam["getUserMedia camera"] --> mp["MediaPipe PoseLandmarker<br/>js/pose.js (WASM, GPU)"]
-        mp --> ui["3D voxel body or skeleton, state, meter<br/>js/voxelbody.js, view.js"]
+        mp --> ui["Hologram, voxel body or skeleton, state, meter<br/>js/hologram.js, voxelbody.js, view.js"]
     end
     subgraph server["Local server (backend/)"]
         ws["/ws<br/>app.py"] --> sess["PostureSession<br/>session.py"]
@@ -159,6 +159,7 @@ inline scripts, no framing, nosniff).
 | `frontend/js/connection.js` | WebSocket client with reconnect and backoff |
 | `frontend/js/main.js` | camera, frame loop, calibration, alerts, labelling |
 | `frontend/js/view.js`, `skeleton.js` | everything that draws or writes to the page |
+| `frontend/js/hologram.js` | the default Hologram style (WebGL2, own GLSL shaders): the 478-point face mesh (`FaceLandmarker`, model from `/model/face_landmarker.task`, points never leave the page) as glowing triangle edges with constellation lines over one side; a low-poly neck and shoulders from jittered points over the voxel silhouette, triangulated; face-tracking brackets, a scan line, linked particles. Lines are instanced quads with a glow falloff, added together (additive blending); short face edges are dimmed so eyes and lips don't burn white. Slouching jitters it, an alert tears it (over-stretched edges fade) and scatters the points |
 | `frontend/js/voxelbody.js` | the 3D voxel body (WebGL2, own GLSL shaders, no library): each frame the landmarks become capsules, a torso slab and a head ellipsoid, are voxelized onto a 56-column grid and drawn as instanced cubes. Ear-shoulder voxels glow in the state colour; slouching cracks the body (more as the alert nears), an alert shatters it, recovery reassembles it. Voxels are scaled with depth so each lands on its spot in the video. Falls back to `skeleton.js` without WebGL2 or after a lost GPU context; no motion under `prefers-reduced-motion` |
 | `frontend/login.html`, `auth.css`, `js/login.js` | log in, sign up, phone codes, finishing a verified sign-up, trial ended |
 | `frontend/js/api.js` | JSON helper for `/api/*` that surfaces the server's error message |
