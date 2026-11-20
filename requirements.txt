@@ -1,11 +1,13 @@
-mediapipe>=0.10.14
-opencv-python
-numpy
-plyer
-pystray
-Pillow
-psutil
-pytest
-fastapi
-uvicorn[standard]
-httpx
+# Exact versions that pass the test suite on Python 3.12 (Windows). Upgrade on
+# purpose: change a pin, run `pytest -q`, and commit the new pin with the result.
+mediapipe==1.2.3
+opencv-python==5.1.0.95
+numpy==2.5.5
+plyer==2.1.0
+pystray==0.19.5
+Pillow==13.0.0
+psutil==7.2.2
+pytest==9.2.0
+fastapi==0.165.0
+uvicorn[standard]==0.54.0
+httpx==0.28.1

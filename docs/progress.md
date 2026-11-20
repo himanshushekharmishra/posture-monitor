@@ -3,7 +3,7 @@
 Where the project stands, what has been checked, and what is left. Update this file
 with every change (see the rule in `CLAUDE.md`).
 
-Last updated: 2026-11-20, on `main`, after adding the tilted-calibration warning.
+Last updated: 2026-11-20, on `main`, after pinning dependency versions.
 
 ## Status at a glance
 
@@ -51,7 +51,8 @@ Each phase is one commit, so the history shows how the app was built up.
 | `scripts/make_demo_data.py` and steps for retaking the README screenshots | `04ef5e9` |
 | `setup.ps1` really uses `py -3.12`/`-3.11`: on Windows PowerShell 5.1 the version flag was dropped, so it checked the default Python and fell back to uv; `.claude/launch.json` to start the web app from Claude Code | `6f29b08` |
 | `CLAUDE.md` trimmed to goal, commands and rules; folder map, pipeline, features, state machine and phase list now live only in `docs/architecture.md` and this file | `e2d6a57` |
-| Warning when a calibration comes out tilted (over `calibration_max_tilt_degrees`, 8): tilt is scored against the baseline, so a crooked one pushes level sitting toward an alert. Shown in the console, as a tray notification and in the web page's banner | this commit |
+| Warning when a calibration comes out tilted (over `calibration_max_tilt_degrees`, 8): tilt is scored against the baseline, so a crooked one pushes level sitting toward an alert. Shown in the console, as a tray notification and in the web page's banner | `d39dcd4` |
+| `requirements.txt` pins the exact versions the tests pass with (MediaPipe 1.2.3, NumPy 2.5.5, FastAPI 0.165.0, ...), so every laptop installs the same set | this commit |
 
 ## Fixes from the code review (2026-11-15)
 
