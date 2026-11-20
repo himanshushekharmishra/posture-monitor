@@ -157,7 +157,7 @@ inline scripts, no framing, nosniff).
 | `backend/__main__.py` | `python -m backend` runs uvicorn on `web_host`/`web_port` |
 | `frontend/js/pose.js` | loads the model (served by the backend) and runs it in VIDEO mode |
 | `frontend/js/connection.js` | WebSocket client with reconnect and backoff |
-| `frontend/js/main.js` | camera, frame loop, calibration, alerts, labelling |
+| `frontend/js/main.js` | camera, frame loop, calibration, alerts, labelling; the black "DISMISSED" screen after `web_dismiss_seconds` with nobody in view (decided in the page from each frame, so it clears on the first frame with a person) |
 | `frontend/js/view.js`, `skeleton.js` | everything that draws or writes to the page |
 | `frontend/js/hologram.js` | the default Hologram style (WebGL2, own GLSL shaders): a sparse low-poly face: 31 key points of the 478-point face mesh (`FaceLandmarker`, model from `/model/face_landmarker.task`, points never leave the page) joined by a fixed Delaunay triangulation (computed once on MediaPipe's canonical face), thin light-blue lines with glowing nodes; a low-poly neck and shoulders from jittered points over the body outline (`bodyshape.js`), triangulated; face-tracking brackets, a scan line, linked particles. Lines are instanced quads with a glow falloff, added together; the canvas covers the video only 30%, so the glow brightens even a light background instead of tinting it darker. Slouching jitters it, an alert tears it (over-stretched edges fade) and scatters the points |
 | `frontend/js/bodyshape.js` | pure geometry for the hologram's neck and shoulders: the pose as capsules (limbs, neck, ear-shoulder bands), a torso slab and a head ellipse, filled into grid cells; cells near the ear-shoulder lines are marked as key |

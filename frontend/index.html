@@ -57,6 +57,29 @@
               <video id="video" playsinline muted></video>
               <canvas id="overlay" aria-hidden="true"></canvas>
               <canvas id="hologram" aria-hidden="true"></canvas>
+              <!-- No one in view for a while: black screen over the still-running camera -->
+              <div class="dismissed" id="dismissed" role="status" hidden>
+                <svg class="dismissed-sign" viewBox="0 0 120 120" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="sign-red" gradientUnits="userSpaceOnUse"
+                      x1="16" y1="12" x2="104" y2="100">
+                      <stop offset="0" stop-color="#ff5a5a"/>
+                      <stop offset="0.55" stop-color="#e3242b"/>
+                      <stop offset="1" stop-color="#a50f17"/>
+                    </linearGradient>
+                    <radialGradient id="sign-shadow">
+                      <stop offset="0" stop-color="#ff2a2a" stop-opacity="0.4"/>
+                      <stop offset="1" stop-color="#ff2a2a" stop-opacity="0"/>
+                    </radialGradient>
+                  </defs>
+                  <ellipse cx="60" cy="113" rx="36" ry="5" fill="url(#sign-shadow)"/>
+                  <circle cx="60" cy="56" r="44" fill="none" stroke="url(#sign-red)" stroke-width="13"/>
+                  <line x1="28.9" y1="24.9" x2="91.1" y2="87.1" stroke="url(#sign-red)" stroke-width="13"/>
+                </svg>
+                <p class="dismissed-word">DISMISSED</p>
+                <p class="visually-hidden">No one in view for a while. The camera is still on and
+                  picks you up again as soon as you're back.</p>
+              </div>
               <div class="stage-message" id="stage-message">
                 <p class="stage-title">Your camera is off</p>
                 <p>Start it to check your posture. The video stays in this browser; only 33

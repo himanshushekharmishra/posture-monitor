@@ -192,6 +192,25 @@ button:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 }
 .stage-title { font-size: var(--t-3); font-weight: 800; color: #fff; }
 .stage[data-camera="on"] .stage-message { display: none; }
+/* No one in view for a while: a black screen over the camera, which keeps running. */
+.dismissed {
+  position: absolute; inset: 0;
+  display: grid; place-content: center; justify-items: center; gap: 1rem;
+  background: #000; text-align: center;
+  animation: dismiss-in 0.6s ease-out;
+}
+.dismissed[hidden] { display: none; }
+.dismissed-sign {
+  width: min(36vw, 11rem); height: auto;
+  filter: drop-shadow(0 0 1.2rem rgb(255 40 40 / 0.35));
+}
+.dismissed-word {
+  font-size: var(--t-3); font-weight: 800; letter-spacing: 0.35em;
+  margin-right: -0.35em; /* letter-spacing adds space after the last letter too */
+  color: #f4f4f4;
+}
+@keyframes dismiss-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .dismissed { animation: none; } }
 .calibration-banner {
   position: absolute; left: 1rem; right: 1rem; bottom: 1rem;
   padding: 0.7rem 1rem; border-radius: 10px;

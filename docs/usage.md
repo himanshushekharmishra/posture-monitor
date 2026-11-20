@@ -23,6 +23,10 @@
      particles. Amber jitter while slouching; an alert rips the mesh apart and
      sitting up rebuilds it.
    - **Lines**: the simple skeleton. Browsers without WebGL2 always get this one.
+
+   When no one has been in view for `web_dismiss_seconds` (60), the camera area turns
+   black with a red no-entry sign and **DISMISSED**. The camera keeps running behind
+   it, so the moment you sit back down it clears and monitoring carries on.
 4. Sit upright and press **Calibrate** (3 s countdown, 5 s recording). Each account
    has its own calibration and history. The desktop app keeps its own.
 5. **Turn on notifications** to get alerts while the tab is in the background.

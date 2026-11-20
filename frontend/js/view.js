@@ -47,6 +47,11 @@ export function setHint(text, tone = "") {
   el.dataset.tone = tone;
 }
 
+/** The black "DISMISSED" screen over the camera when no one has been there a while. */
+export function setDismissed(on) {
+  $("dismissed").hidden = !on;
+}
+
 export function setCameraOn(on) {
   $("stage").dataset.camera = on ? "on" : "off";
   $("camera-btn").textContent = on ? "Stop camera" : "Start camera";

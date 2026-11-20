@@ -28,6 +28,8 @@ const app = {
     hologram: createHologram(document.getElementById("hologram")),
   },
   style: readStyle(),
+  lastSeen: 0, // performance.now() when a person was last in view
+  dismissed: false,
 };
 
 // ---------- view style: hologram or 2D lines ----------
@@ -193,6 +195,7 @@ ticker.onmessage = tick;
 function tick() {
   if (!app.stream || video.readyState < 2) return;
   const { landmarks, ms } = app.detector.detect(video);
+  updateDismissed(landmarks);
   const style = activeStyle();
   if (style !== app.shownStyle) applyStyle(); // e.g. a GPU context was lost
   app.shownStyle = style;
@@ -208,6 +211,26 @@ function tick() {
     landmarks: landmarks && landmarks.map((p) => [p.x, p.y, p.visibility ?? 1]),
     pose_ms: Math.round(ms * 10) / 10,
   });
+}
+
+// ---------- nobody there for a while: black "DISMISSED" screen ----------
+// The camera and pose detection keep running behind it, so a person coming back is
+// picked up on the next frame and the screen clears at once.
+const PRESENCE_POINTS = [0, 7, 8, 11, 12]; // nose, ears, shoulders
+
+function personInView(landmarks) {
+  return Boolean(landmarks) && PRESENCE_POINTS.some(
+    (i) => (landmarks[i].visibility ?? 1) >= app.config.min_visibility);
+}
+
+function updateDismissed(landmarks) {
+  const now = performance.now();
+  if (personInView(landmarks)) app.lastSeen = now;
+  const dismissed = now - app.lastSeen > app.config.web_dismiss_seconds * 1000;
+  if (dismissed !== app.dismissed) {
+    app.dismissed = dismissed;
+    view.setDismissed(dismissed);
+  }
 }
 
 /** What went wrong with the camera, and what to do about it. */
@@ -246,6 +269,7 @@ async function startCamera() {
   view.setHint(app.calibrated
     ? "Watching your posture. You can switch to another tab; alerts still arrive."
     : "Sit upright and press Calibrate so the app learns your good posture.");
+  app.lastSeen = performance.now();
   ticker.postMessage(1000 / app.config.process_fps);
   applyStyle();
 }
@@ -258,6 +282,8 @@ function stopCamera() {
   video.srcObject = null;
   clearSkeleton(overlay);
   applyStyle(); // no stream now: stops whichever renderer was running
+  app.dismissed = false;
+  view.setDismissed(false); // the "camera off" message takes over
   view.setCameraOn(false);
   view.showCameraOff(); // don't leave the last posture state on screen
   view.setHint("Camera off.");

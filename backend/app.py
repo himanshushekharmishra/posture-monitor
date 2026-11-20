@@ -44,7 +44,7 @@ log = logging.getLogger("posture.web")
 PUBLIC_SETTINGS = (
     "process_fps", "min_visibility", "slouch_threshold", "persist_seconds",
     "cooldown_minutes", "away_timeout_seconds", "calibration_seconds",
-    "calibration_countdown_seconds",
+    "calibration_countdown_seconds", "web_dismiss_seconds",
 )
 APP_PAGES = {"/", "/index.html"}  # need an active account
 LOGIN_PAGE = "/login.html"
