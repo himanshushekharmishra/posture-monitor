@@ -3,7 +3,7 @@
 Where the project stands, what has been checked, and what is left. Update this file
 with every change (see the rule in `CLAUDE.md`).
 
-Last updated: 2026-11-20, on `main`, after adding the DISMISSED screen.
+Last updated: 2026-11-20, on `main`, after simplifying account deletion.
 
 ## Status at a glance
 
@@ -61,7 +61,8 @@ Each phase is one commit, so the history shows how the app was built up.
 | Hologram style keeps the camera video as is (no dark-blue tint), on request after trying it live | `8bec7f8` |
 | Hologram face: a sparse low-poly mesh over 31 key points (fixed triangulation from MediaPipe's canonical face) instead of all 2,556 mesh edges; thinner, light-blue lines with blue-glowing nodes; the body mesh stops at the chin; the canvas mostly adds light, so it never darkens a bright video. Checked in headless Chrome with face and pose detected on a real photo | `bd6ba76` |
 | 3D blocks style removed on request; its body-outline grid moved to `frontend/js/bodyshape.js`, which the hologram's neck and shoulders still use. **Style** now switches between Hologram and Lines | `5a2f3ef` |
-| Web page: after `web_dismiss_seconds` (60) with nobody in view, the camera area turns black with a red no-entry sign and DISMISSED; the camera and detection keep running and the first frame with a person clears it | this commit |
+| Web page: after `web_dismiss_seconds` (60) with nobody in view, the camera area turns black with a red no-entry sign and DISMISSED; the camera and detection keep running and the first frame with a person clears it | `b4347e7` |
+| Delete account: just a **Delete my account** button and a small "Delete your account?" dialog with Yes and No; the username and password fields are gone, and the server now only needs a logged-in session (the request guard still refuses cross-site and non-JSON writes) | this commit |
 
 ## Fixes from the code review (2026-11-15)
 

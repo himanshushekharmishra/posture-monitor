@@ -57,11 +57,6 @@ class PasswordChangeBody(BaseModel):
     new_password: str = Field(max_length=256)
 
 
-class DeleteAccountBody(BaseModel):
-    password: str = Field(max_length=256)
-    confirm_username: str = Field(max_length=64)
-
-
 EMAIL_RE = re.compile(r"^[^@\s]{1,64}@[^@\s]+\.[^@\s]{2,}$")
 
 
@@ -304,12 +299,11 @@ class Auth:
             return {"status": "changed"}
 
         @r.post("/api/account/delete")
-        def delete_account(body: DeleteAccountBody, request: Request,
-                           response: Response) -> dict:
+        def delete_account(request: Request, response: Response) -> dict:
+            # Being logged in is enough; the page asks "Are you sure?" first. The app's
+            # request guard refuses cross-site and non-JSON writes, so another site
+            # can't trigger this.
             user = require(request)
-            if body.confirm_username.strip().lower() != user.username.lower():
-                raise HTTPException(400, "Type your username exactly to confirm.")
-            check_password(request, user, body.password)
             self.store.delete_user(user.id)
             response.delete_cookie(SESSION_COOKIE, path="/")
             log.info("Account %s deleted", user.id)

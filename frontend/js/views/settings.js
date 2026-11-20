@@ -134,22 +134,32 @@ $("password-form").addEventListener("submit", async (e) => {
   }
 });
 
-// ---------- delete ----------
-$("delete-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const form = e.currentTarget;
-  if (!me || form.username.value.trim().toLowerCase() !== me.username.toLowerCase()) {
-    mark(form.username, true);
-    setStatus(form, "Type your username exactly to confirm.", "error");
-    return;
-  }
+// ---------- delete: one button, then "Are you sure?" ----------
+const deleteDialog = $("delete-dialog");
+
+$("delete-btn").addEventListener("click", () => {
+  setStatus($("delete-block"), "");
+  deleteDialog.showModal(); // "No" has focus; Escape also closes it
+});
+
+$("delete-no").addEventListener("click", () => deleteDialog.close());
+
+// A click on the dimmed backdrop (outside the box) counts as "No".
+deleteDialog.addEventListener("click", (e) => {
+  if (e.target === deleteDialog) deleteDialog.close();
+});
+
+$("delete-yes").addEventListener("click", async () => {
+  const yes = $("delete-yes");
+  yes.disabled = true;
   try {
-    await api("/api/account/delete", {
-      password: form.password.value, confirm_username: form.username.value.trim(),
-    });
+    await api("/api/account/delete", {});
     location.replace("/login.html");
   } catch (err) {
-    setStatus(form, err.message, "error");
+    deleteDialog.close();
+    setStatus($("delete-block"), err.message, "error");
+  } finally {
+    yes.disabled = false;
   }
 });
 

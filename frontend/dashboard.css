@@ -208,3 +208,15 @@
 .danger h3 { color: var(--alert); }
 .danger-btn { border-color: var(--alert); color: var(--alert); }
 .danger-btn:hover:not(:disabled) { background: var(--alert); border-color: var(--alert); color: var(--sheet); }
+
+/* "Are you sure?" dialog for deleting the account */
+.confirm-dialog {
+  width: min(22rem, calc(100vw - 2rem)); padding: 1.4rem 1.5rem;
+  border: 1px solid var(--rule); border-radius: 14px;
+  background: var(--sheet); color: var(--ink);
+  box-shadow: 0 18px 48px rgb(var(--shadow) / 0.35);
+}
+.confirm-dialog::backdrop { background: rgb(15 32 54 / 0.5); }
+.confirm-dialog h3 { font-size: var(--t-2); font-weight: 800; margin: 0 0 0.4rem; color: var(--alert); }
+.confirm-dialog p { margin: 0 0 1.2rem; color: var(--ink-soft); }
+.dialog-buttons { display: flex; justify-content: flex-end; gap: 0.6rem; }

@@ -165,11 +165,7 @@ def test_delete_account_removes_everything(env):
     me = signup(client, "leaver")
     record_session(db, me)
     store.save_baseline_json(me, "{}")
-    assert client.post("/api/account/delete",
-                       json={"password": PW, "confirm_username": "someone"}).status_code == 400
-    assert client.post("/api/account/delete",
-                       json={"password": "wrong password!", "confirm_username": "leaver"}).status_code == 403
-    r = client.post("/api/account/delete", json={"password": PW, "confirm_username": "LEAVER"})
+    r = client.post("/api/account/delete", json={})
     assert r.status_code == 200
     assert client.get("/api/auth/me").status_code == 401
     assert store.get_user(me) is None and store.get_baseline_json(me) is None
@@ -177,6 +173,11 @@ def test_delete_account_removes_everything(env):
     assert lg.recent_sessions() == []
     lg.close()
     signup(client, "leaver")  # the name is free again
+
+
+def test_delete_account_needs_a_login(env):
+    client, _, _ = env
+    assert client.post("/api/account/delete", json={}).status_code == 401
 
 
 def test_web_sessions_only_count_time_with_frames(tmp_path):

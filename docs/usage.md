@@ -48,7 +48,8 @@ pages; pick one, or press Escape or click outside to close it:
 - **Profile**: your name, account type, how you sign in, and all-time numbers.
 - **Settings**: change your name and contact email, connect Google, GitHub or a
   phone, change your password (other devices are logged out), or delete your
-  account and everything recorded for it.
+  account and everything recorded for it (**Delete my account**, then **Yes** in the
+  "Delete your account?" box; **No**, Escape or a click outside cancels).
 
 ### Setting up Google, GitHub and SMS
 They're off until you add their keys to `.env` (see `config/env.example`):
