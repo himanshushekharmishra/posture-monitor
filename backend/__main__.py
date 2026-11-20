@@ -1,7 +1,8 @@
 """Run the web app:  python -m backend  [--host 127.0.0.1] [--port 8000]
 
 Then open http://127.0.0.1:8000 in a browser. Keep the default host: browsers only
-allow camera access on localhost or HTTPS, and the server has no authentication.
+allow camera access on localhost or HTTPS, and this server speaks plain HTTP, so on a
+network passwords and session cookies would travel unencrypted.
 """
 import argparse
 import logging
