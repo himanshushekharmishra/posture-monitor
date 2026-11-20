@@ -3,7 +3,7 @@
 Where the project stands, what has been checked, and what is left. Update this file
 with every change (see the rule in `CLAUDE.md`).
 
-Last updated: 2026-11-15, on `main`, after adding pictures to the README.
+Last updated: 2026-11-20, on `fix/setup-python-detect`, after fixing Python detection in `setup.ps1`.
 
 ## Status at a glance
 
@@ -48,7 +48,8 @@ Each phase is one commit, so the history shows how the app was built up.
 | Benchmark rerun at 5/10/15 FPS (nobody in frame) | `a3d867c` |
 | This progress log; docs-update rule in `CLAUDE.md` | `8ec1746` |
 | README pictures: pipeline and posture diagrams, web app screenshots (light and dark), state machine | `26da4d5`, `27bfa01` |
-| `scripts/make_demo_data.py` and steps for retaking the README screenshots | this commit |
+| `scripts/make_demo_data.py` and steps for retaking the README screenshots | `04ef5e9` |
+| `setup.ps1` really uses `py -3.12`/`-3.11`: on Windows PowerShell 5.1 the version flag was dropped, so it checked the default Python and fell back to uv; `.claude/launch.json` to start the web app from Claude Code | this commit |
 
 ## Fixes from the code review (2026-11-15)
 
@@ -158,6 +159,9 @@ likely the camera privacy key or switch is on. Not something the app can fix.
   - a desktop notification appeared on screen
   - the tray run paused, resumed and quit cleanly (scripted)
   - `setup.ps1` on a fresh folder (fell back to uv) and on the project
+  - `setup.ps1` on a second laptop (2026-11-20) with Python 3.12 from the py launcher
+    and no uv: found 3.12 after the fix, installed MediaPipe 1.2.3, 122 tests pass, and
+    the web login page loads with no console errors
   - `--video` and `--label` on a generated test clip
   - the web page in a browser: light and dark themes, phone width, pose model
     loading on the GPU, and a full calibrate, slouch, alert and label run over

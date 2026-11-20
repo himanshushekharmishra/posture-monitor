@@ -12,7 +12,11 @@ function Invoke-Checked([string]$what, [scriptblock]$cmd) {
 
 function Test-Python([string[]]$cmd) {
   try {
-    $exe, $rest = $cmd
+    # Keep $rest an array: `$exe, $rest = $cmd` makes it a plain string when there is
+    # one extra argument, and Windows PowerShell 5.1 then drops it when splatting, so
+    # `py -3.12` silently ran the default Python instead.
+    $exe = $cmd[0]
+    $rest = @($cmd | Select-Object -Skip 1)
     $v = & $exe @rest -c "import sys; print('%d.%d' % sys.version_info[:2])" 2>$null
     return ($LASTEXITCODE -eq 0) -and ($v -in @("3.11", "3.12"))
   } catch { return $false }
